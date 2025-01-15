@@ -36,6 +36,7 @@ client = Client(api_key, secret_key)
 #    quantity=0.01,    #살 코인 갯수
 #    price='96784.3')  #갯수
 
+"""
 slack_key = os.getenv('Slack_Token')   #slack으로 매수 매도 확인
 slack = slack_sdk.WebClient(token=slack_key)
 
@@ -47,3 +48,22 @@ response = slack.chat_postMessage(
     text=slack_msg
 )
 #print(response)
+"""
+
+"""
+#재산 잔액
+balance = client.get_asset_balance(asset='BTC')  
+print(balance)
+"""
+
+"""
+#계좌 상태
+status = client.get_account_status()   
+print(status)
+"""
+
+"""
+#계정 세부정보
+details = client.get_asset_details()   
+print(details)
+"""
