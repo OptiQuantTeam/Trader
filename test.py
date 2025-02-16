@@ -1,50 +1,44 @@
+import json
 import os
 from dotenv import load_dotenv
-import slack_sdk
+
 from binance.client import Client
 from binance.enums import *
-import argparse
+
+from utils import get_configure, send_message, futures_market_params, send_error
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 SECRET_KEY = os.getenv("SECRET_KEY")
-BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 
 
-bi_client = Client(API_KEY, SECRET_KEY)
-
-#bi_client.ping()
 '''
-asset = bi_client.create_test_order(
-    symbol='BTCUSDT',
-    side=SIDE_BUY,
-    type=ORDER_TYPE_LIMIT,
+*** event ***                   *** config ***
+    price                           user_id
+    symbol                          ratio
+    side                            leverage
+    positionSide                    type
+
+'''
+'''
+event={'test': 'test'}
+config = get_configure()
+
+client = Client(API_KEY, SECRET_KEY)
+balance = client.get_asset_balance(asset='USDT')
+print(balance)
+response = client.create_test_order(
+    symbol=event['symbol'],
+    side=event['side'],
+    type=config['type'],
     timeInForce=TIME_IN_FORCE_GTC,
     quantity=1,
     price='97809')
-print(asset)
+response = client.ping()
+send_message(event, response)
 '''
-status = bi_client.get_asset_details()
-print(status)
-#parser = argparse.ArgumentParser()
-
-#parser.add_argument('--target', required=True)
-#args = parser.parse_args()
-
-#print(args.target)
-
-
-
-'''
-client = slack_sdk.WebClient(token=BOT_TOKEN)
-
-user_id = "U086P8NDFPA"
-slack_msg = f'<@{user_id}> {asset}' 
-
-response = client.chat_postMessage(
-    channel="trading",
-    text=slack_msg
-)
-#print(response)
-'''
+try:
+    di = 10/0
+except Exception as e:
+    print(e)
