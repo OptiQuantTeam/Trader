@@ -33,6 +33,6 @@ def get_configure():
         Key={
             'user_id': AWS_USER_ID
         })
-    print(json.dumps(response['Item'], indent=4))
-    
-    return json.dumps(response['Item'], indent=4)
+    #print(json.dumps(response['Item'], indent=4))
+    return response['Item']
+    #return json.dumps(response['Item'], indent=4)
