@@ -4,14 +4,22 @@ from dotenv import load_dotenv
 
 from binance.client import Client
 from binance.enums import *
-from utils import get_configure, send_message, \
-                futures_market_params, send_error, \
-                futures_limit_params, spot_limit_params, spot_market_params
+
+from utils import get_configure, futures_market_params, \
+                futures_limit_params, spot_limit_params, spot_market_params, \
+                SlackBot
 
 
+
+'''
+Binance API <- AWS DynamoDB
+Slack API   <- AWS DynamoDB
+AWS API     <- AWS Lambda Env --> lambda 안에서는 필요 없음
+'''
 load_dotenv()
-API_KEY = os.getenv("API_KEY")
-SECRET_KEY = os.getenv("SECRET_KEY")
+AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY')    #lambda 안에선 필요x
+AWS_SECRET_KEY = os.getenv('AWS_SECRET_KEY')    #lambda 안에선 필요x
+AWS_USER_ID = os.getenv('AWS_USER_ID')
 
 '''
 *** event ***                   *** config ***
@@ -21,13 +29,21 @@ SECRET_KEY = os.getenv("SECRET_KEY")
     positionSide                    type
     trade                           sl
                                     tp
+                                    api_key
+                                    secret_key
+                                    slack_token
+                                    slack_user
+                                    slack_channel
 '''
 
 def lambda_handler(event, context):
     try:
-        client = Client(API_KEY, SECRET_KEY)
+        config = get_configure(AWS_USER_ID, AWS_ACCESS_KEY, AWS_SECRET_KEY)
+
+        client = Client(config['api_key'], config['secret_key'])
+        slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
+
         balance = client.get_asset_balance(asset='USDT')
-        config = get_configure()
         server_time = client.get_server_time()
         server_timestamp = server_time['serverTime']
         
@@ -87,10 +103,10 @@ def lambda_handler(event, context):
                     #quantity=params['quantity'],
                     newOrderRespType='FULL',
                     timestamp=server_timestamp)
-                response = send_message(event, order, sl, tp)
+                response = slackBot.send_message(event, order, sl, tp)
                     
             elif event['side'] == 'SELL':
-                response = send_message(event, order)  
+                response = slackBot.send_message(event, order)  
 
             else:
                 raise Exception(f"Invalid Side : {event['side']}")
@@ -142,10 +158,10 @@ def lambda_handler(event, context):
                     #quantity=params['quantity'],
                     newOrderRespType='FULL',
                     timestamp=server_timestamp)
-                response = send_message(event, order, sl, tp)
+                response = slackBot.send_message(event, order, sl, tp)
 
             elif event['side'] == 'SELL':
-                response = send_message(event, order)
+                response = slackBot.send_message(event, order)
 
             else:
                 raise Exception(f"Invalid Side : {event['side']}")
@@ -154,7 +170,7 @@ def lambda_handler(event, context):
 
     except Exception as e:
         print(e)
-        return send_error(e)
+        return slackBot.send_error(e)
     
     return response
 

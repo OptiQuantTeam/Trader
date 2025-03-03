@@ -1,40 +1,45 @@
 import slack_sdk
-import os
-from dotenv import load_dotenv
-import json
 
-load_dotenv()
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-USER_ID = os.getenv("USER_ID")
+class SlackBot():
+    def __init__(self, BOT_TOKEN, CHANNEL, USER_ID=None):
+        self.client = slack_sdk.WebClient(token=BOT_TOKEN)
+        self.channel = CHANNEL
+        self.user_id = USER_ID
 
+    def send_message(self, event, resp, sl=None, tp=None):
 
-def send_message(event, resp, sl=None, tp=None):
+        if self.user_id == None:
+            tag = ''
+        else:
+            tag = f'<@{self.user_id}>'
 
-    client = slack_sdk.WebClient(token=BOT_TOKEN)
+        slack_msg = f'{tag} {resp}\n' 
 
-    slack_msg = f'<@{USER_ID}> {resp}\n' 
+        response = self.client.chat_postMessage(
+            channel=self.channel,
+            text=slack_msg
+        )
 
-    response = client.chat_postMessage(
-        channel="trading",
-        text=slack_msg
-    )
+        return {
+            'statusCode' : 200,
+            'body':response
+        }
 
-    return {
-        'statusCode' : 200,
-        'body':resp
-    }
+    def send_error(self, error):
 
-def send_error(error):
-    client = slack_sdk.WebClient(token=BOT_TOKEN)
+        if self.user_id == None:
+            tag = ''
+        else:
+            tag = f'<@{self.user_id}>'
 
-    slack_msg = f'<@{USER_ID}> error : {error}\n' 
+        slack_msg = f'{tag} {error}\n' 
 
-    response = client.chat_postMessage(
-        channel="trading",
-        text=slack_msg
-    )
+        response = self.client.chat_postMessage(
+            channel=self.channel,
+            text=slack_msg
+        )
 
-    return {
-        'statusCode' : 400,
-        'body':error
-    }
+        return {
+            'statusCode' : 400,
+            'body':error
+        }

@@ -5,5 +5,4 @@ from .binance import futures_limit_params
 from .binance import spot_market_params
 from .binance import spot_limit_params
 
-from .slack import send_message
-from .slack import send_error
+from .slack import SlackBot
