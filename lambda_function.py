@@ -19,7 +19,7 @@ AWS API     <- AWS Lambda Env --> lambda 안에서는 필요 없음
 load_dotenv()
 AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY')    #lambda 안에선 필요x
 AWS_SECRET_KEY = os.getenv('AWS_SECRET_KEY')    #lambda 안에선 필요x
-AWS_USER_ID = os.getenv('AWS_USER_ID')
+AWS_USER_ID = os.getenv('AWS_USER_ID')          #.env파일에서 AWS Lambda 환경변수로 변경할 예정
 
 '''
 *** event ***                   *** config ***
@@ -38,7 +38,8 @@ AWS_USER_ID = os.getenv('AWS_USER_ID')
 
 def lambda_handler(event, context):
     try:
-        config = get_configure(AWS_USER_ID, AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        #config = get_configure(AWS_USER_ID, AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        config = get_configure(AWS_USER_ID)
 
         client = Client(config['api_key'], config['secret_key'])
         slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
