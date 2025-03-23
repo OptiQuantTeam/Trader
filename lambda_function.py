@@ -65,7 +65,7 @@ def lambda_handler(event, context):
  
             else:
                 raise Exception(f"Invalid Type : {event['type']}")
-            
+            '''
             if event['side'] == 'BUY':
                 sl = client.futures_create_test_order(
                     symbol=params['symbol'],
@@ -95,7 +95,7 @@ def lambda_handler(event, context):
 
             else:
                 raise Exception(f"Invalid Side : {event['side']}")
-
+            ''' 
         
         else:
             raise Exception(f"Invalid Trade : {event['trade']}")
