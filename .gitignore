@@ -1,0 +1,4 @@
+.env
+__pycache__
+lambda_function_fianl.py
+requirement.txt
