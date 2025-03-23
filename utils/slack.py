@@ -13,7 +13,7 @@ class SlackBot():
         else:
             tag = f'<@{self.user_id}>'
 
-        slack_msg = f'{tag} {resp}\n' 
+        slack_msg = f'{tag} 거래됨\n {resp}\n' 
 
         response = self.client.chat_postMessage(
             channel=self.channel,

@@ -17,8 +17,7 @@ Slack API   <- AWS DynamoDB
 AWS API     <- AWS Lambda Env --> lambda 안에서는 필요 없음
 '''
 load_dotenv()
-AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY')    #lambda 안에선 필요x
-AWS_SECRET_KEY = os.getenv('AWS_SECRET_KEY')    #lambda 안에선 필요x
+
 AWS_USER_ID = os.getenv('AWS_USER_ID')          #.env파일에서 AWS Lambda 환경변수로 변경할 예정
 
 '''
@@ -38,9 +37,7 @@ AWS_USER_ID = os.getenv('AWS_USER_ID')          #.env파일에서 AWS Lambda 환
 
 def lambda_handler(event, context):
     try:
-        #config = get_configure(AWS_USER_ID, AWS_ACCESS_KEY, AWS_SECRET_KEY)
         config = get_configure(AWS_USER_ID)
-
         client = Client(config['api_key'], config['secret_key'])
         slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
 
@@ -65,20 +62,7 @@ def lambda_handler(event, context):
                     #quantity=params['quantity'],
                     newOrderRespType='FULL',
                     timestamp=server_timestamp)
-                
-            elif config['type'] == 'LIMIT':
-                params = futures_limit_params(event, config, balance)
-
-                order = client.create_test_order(
-                    symbol=params['symbol'],
-                    side=params['side'],
-                    positionSide=params['positionSide'],
-                    type=params['type'],
-                    quantity=params['quantity'],
-                    timeInForce='IOC',
-                    price=params['price'],
-                    newOrderRespType='FULL',
-                    timestamp=server_timestamp)
+ 
             else:
                 raise Exception(f"Invalid Type : {event['type']}")
             
@@ -112,60 +96,7 @@ def lambda_handler(event, context):
             else:
                 raise Exception(f"Invalid Side : {event['side']}")
 
-        elif event['trade'] == 'spot':
-            if config['type'] == 'MARKET':
-                params = spot_market_params(event=event, config=config, balance=balance)
-                
-                #futures_create_order
-                order = client.create_test_order(
-                    symbol=params['symbol'],
-                    side=params['side'],
-                    type=params['type'],
-                    quantity=1,
-                    #quantity=params['quantity'],
-                    newOrderRespType='FULL',
-                    timestamp=server_timestamp)
-                
-            elif config['type'] == 'LIMIT':
-                params = spot_limit_params(event, config, balance)
-
-                order = client.create_test_order(
-                    symbol=params['symbol'],
-                    side=params['side'],
-                    type=params['type'],
-                    quantity=params['quantity'],
-                    timeInForce='IOC',
-                    price=params['price'],
-                    newOrderRespType='FULL',
-                    timestamp=server_timestamp)
-            
-            if event['side'] == 'BUY':
-                sl = client.create_test_order(
-                    symbol=params['symbol'],
-                    side='SELL',
-                    type='STOP_LOSS',
-                    stopprice=params['sl'],
-                    quantity=1,
-                    #quantity=params['quantity'],
-                    newOrderRespType='FULL',
-                    timestamp=server_timestamp)
-                
-                tp = client.create_test_order(
-                    symbol=params['symbol'],
-                    side='SELL',
-                    type='TAKE_PROFIT',
-                    stopprice=params['tp'],
-                    quantity=1,
-                    #quantity=params['quantity'],
-                    newOrderRespType='FULL',
-                    timestamp=server_timestamp)
-                response = slackBot.send_message(event, order, sl, tp)
-
-            elif event['side'] == 'SELL':
-                response = slackBot.send_message(event, order)
-
-            else:
-                raise Exception(f"Invalid Side : {event['side']}")
+        
         else:
             raise Exception(f"Invalid Trade : {event['trade']}")
 
