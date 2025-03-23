@@ -41,7 +41,7 @@ def lambda_handler(event, context):
         client = Client(config['api_key'], config['secret_key'])
         slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
 
-        balance = client.get_asset_balance(asset='USDT')
+        balance = client.futures_account_balance(asset='USDT')
         server_time = client.get_server_time()
         server_timestamp = server_time['serverTime']
         
@@ -107,18 +107,3 @@ def lambda_handler(event, context):
     return response
 
 
-
-dict={
-    'trade':'futures',
-    'price':96070,
-    'symbol':'BTCUSDT',
-    'side':'BUY',
-    'positionSide':'LONG'
-}
-dict2={
-    'trade':'spot',
-    'price':96070,
-    'symbol':'BTCUSDT',
-    'side':'SELL',
-}
-print(lambda_handler(event=dict, context=''))
