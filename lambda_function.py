@@ -38,6 +38,7 @@ AWS_USER_ID = os.getenv('AWS_USER_ID')          #.env파일에서 AWS Lambda 환
 def lambda_handler(event, context):
     try:
         config = get_configure(AWS_USER_ID)
+        print('config : ', config)
         client = Client(config['api_key'], config['secret_key'])
         slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
 
@@ -51,7 +52,7 @@ def lambda_handler(event, context):
             
             if config['type'] == 'MARKET':
                 params = futures_market_params(event=event, config=config, balance=balance)
-                print(params)
+                print('params : ', params)
                 #futures_create_order
                 order = client.futures_create_test_order(
                     symbol=params['symbol'],
@@ -62,9 +63,9 @@ def lambda_handler(event, context):
                     #quantity=params['quantity'],
                     newOrderRespType='FULL',
                     timestamp=server_timestamp)
-                print(order)
+                print('order : ', order)
                 response = slackBot.send_message(event, order)  
-                print(response)
+                print('response : ', response)
             else:
                 raise Exception(f"Invalid Type : {event['type']}")
             '''
