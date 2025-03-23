@@ -13,9 +13,9 @@ def futures_market_params(event, config, balance):
             'side' : event['side'],
             'positionSide' : event['positionSide'],
             'type' : config['type'],
-            'quantity' : quantity,
             'sl' : slprice,
-            'tp' : tpprice
+            'tp' : tpprice,
+            'quantity' : quantity
             }
 
 def futures_limit_params(event, config, balance):
