@@ -44,18 +44,14 @@ def lambda_handler(event, context):
         balance = client.futures_account_balance()
         usdt = float([asset['balance'] for asset in balance if asset['asset'] == 'USDT'][0])
         
-        slackBot.send_message(event, usdt)
         server_time = client.get_server_time()
-        slackBot.send_message(event, server_time)
         server_timestamp = server_time['serverTime']
         
-        slackBot.send_message(event, '테스트111111')
         if event['trade'] == 'futures':
             client.futures_change_leverage(leverage=int(config['leverage']), symbol=event['symbol'])
             
             if config['type'] == 'MARKET':
                 params = futures_market_params(event=event, config=config, asset=usdt)
-                slackBot.send_message(event, '테스트222222')
                 #futures_create_order
                 order = client.futures_create_test_order(
                     symbol=params['symbol'],
