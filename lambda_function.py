@@ -42,7 +42,9 @@ def lambda_handler(event, context):
         slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
 
         balance = client.futures_account_balance(asset='USDT')
+        slackBot.send_message(event, balance)
         server_time = client.get_server_time()
+        slackBot.send_message(event, server_time)
         server_timestamp = server_time['serverTime']
         
         slackBot.send_message(event, '테스트111111')
