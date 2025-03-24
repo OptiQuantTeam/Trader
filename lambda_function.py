@@ -51,7 +51,7 @@ def lambda_handler(event, context):
             
             if config['type'] == 'MARKET':
                 params = futures_market_params(event=event, config=config, balance=balance)
-                
+                slackBot.send_message(event, '테스트')
                 #futures_create_order
                 order = client.futures_create_test_order(
                     symbol=params['symbol'],
