@@ -1,4 +1,5 @@
 import slack_sdk
+import json
 
 class SlackBot():
     def __init__(self, BOT_TOKEN, CHANNEL, USER_ID=None):
