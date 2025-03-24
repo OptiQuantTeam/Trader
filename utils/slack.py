@@ -20,10 +20,10 @@ class SlackBot():
             channel=self.channel,
             text=slack_msg
         )
-
+        print(response.data)
         return {
             'statusCode' : 200,
-            'body':json.dumps(response)
+            'body': 'send message success'
         }
 
     def send_error(self, error):
