@@ -22,7 +22,7 @@ class SlackBot():
 
         return {
             'statusCode' : 200,
-            'body':response
+            'body':json.dumps(response)
         }
 
     def send_error(self, error):
