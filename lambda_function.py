@@ -45,13 +45,13 @@ def lambda_handler(event, context):
         server_time = client.get_server_time()
         server_timestamp = server_time['serverTime']
         
-
+        slackBot.send_message(event, '테스트111111')
         if event['trade'] == 'futures':
             client.futures_change_leverage(leverage=int(config['leverage']), symbol=event['symbol'])
             
             if config['type'] == 'MARKET':
                 params = futures_market_params(event=event, config=config, balance=balance)
-                slackBot.send_message(event, '테스트')
+                slackBot.send_message(event, '테스트222222')
                 #futures_create_order
                 order = client.futures_create_test_order(
                     symbol=params['symbol'],
