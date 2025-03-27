@@ -39,8 +39,8 @@ def lambda_handler(event, context):
         client = Client(config['api_key'], config['secret_key'])
         slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
 
-        slackBot.send_message(resp=f"test1 : {event['mode']}")
-        if event['mode'] == 'dev':
+        
+        if event.get('mode', None) == 'dev':
             slackBot.send_message(resp=f"test2 : {event['mode']}")
             price = client.futures_symbol_ticker(symbol=event['symbol'])['price']
             
