@@ -42,7 +42,9 @@ def lambda_handler(event, context):
         
         if event['test'] == True:
             btc = client.futures_historical_klines(symbol='BTCUSDT', interval='1m', start_str=str(int(datetime.datetime.now().timestamp() * 1000)), limit=1)
+            slackBot.send_message(f"BTC 현재가격 : {btc[0][4]}")
             event['price'] = float(btc[0][4])
+            slackBot.send_message(f"BTC 현재가격 : {event['price']}")
         
         balance = client.futures_account_balance()
         usdt = float([asset['balance'] for asset in balance if asset['asset'] == 'USDT'][0])
