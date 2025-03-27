@@ -20,6 +20,9 @@ jobs:
         run: |
           version=$(TZ='Asia/Seoul' date +'%Y%m%d')
           echo "version=${version}" >> $GITHUB_ENV
+      
+      - name: echo
+        run: echo ls -al
 
       - name: authorize AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
