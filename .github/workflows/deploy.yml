@@ -67,8 +67,11 @@ jobs:
           
           # 이미지 빌드 및 푸시
           docker build -t ${LAMBDA_NAME}:${VERSION} -f ${DOCKERFILE} --no-cache .
+          echo "build success"
           docker tag ${LAMBDA_NAME}:${VERSION} ${ECR_URI}:${VERSION}
+          echo "tag success"
           docker push ${ECR_URI}:${VERSION}
+          echo "push success"
 
       - name: Update Lambda
         run: |
