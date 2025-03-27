@@ -1,13 +1,9 @@
 name: AWS Lambda Build
 
 on:
-  pull_request:
-    branches:
-      - master
-      - develop
-
   push:
     branches:
+      - master
       - develop
 
 jobs:
