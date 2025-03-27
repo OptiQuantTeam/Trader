@@ -6,7 +6,7 @@ RUN pip3 install --upgrade pip
 
 WORKDIR ${LAMBDA_TASK_ROOT}
 
-RUN git clone -b master https://github.com/OptiQuantTeam/Trader.git .
+RUN git clone -b shin https://github.com/OptiQuantTeam/Trader.git .
 
 COPY requirement.txt ${LAMBDA_TASK_ROOT}
 RUN pip3 install --no-cache-dir -r ${LAMBDA_TASK_ROOT}/requirement.txt
