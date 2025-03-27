@@ -55,7 +55,7 @@ jobs:
           # Lambda 함수 호출 및 결과 저장
           RESPONSE=$(aws lambda invoke \
             --function-name trader-lambda \
-            --payload '{"test": "true"}' \
+            --payload '{"price": 84645,"symbol": "BTCUSDT","side": "BUY","positionSide": "LONG","trade": "futures"}' \
             --cli-binary-format raw-in-base64-out \
             output.json)
           
