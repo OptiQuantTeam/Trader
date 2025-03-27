@@ -40,11 +40,11 @@ jobs:
       - name: Docker image push
         run: docker push ${{ secrets.AWS_ECR_TRADER_URI }}:${{ env.version }}
 
-      - name: Update Lambda Function Code
-        uses: aws-actions/aws-lambda-layer-ecr-build@v1
-        with:
-          image-uri: ${{ secrets.AWS_ECR_TRADER_URI }}:${{ env.version }}
-          function-name: trader-lambda
+      - name: Update Lambda Function
+        run: |
+          aws lambda update-function-code \
+            --function-name trader-lambda \
+            --image-uri ${{ secrets.AWS_ECR_TRADER_URI }}:${{ env.version }}
           
       - name: Lambda 함수 테스트 호출
         id: lambda-test
