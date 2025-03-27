@@ -9,11 +9,10 @@ on:
 jobs:
   init-version:
     runs-on: ubuntu-latest
-    outputs:  # job 출력 변수 정의
+    outputs:
       version: ${{ steps.set-version.outputs.version }}
       env_type: ${{ steps.set-env.outputs.env_type }}
       lambda_name: ${{ steps.set-env.outputs.lambda_name }}
-      ecr_uri: ${{ steps.set-env.outputs.ecr_uri }}
     steps:
       - name: Set version
         id: set-version
@@ -27,25 +26,29 @@ jobs:
           if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
             echo "env_type=prod" >> $GITHUB_OUTPUT
             echo "lambda_name=trader-lambda" >> $GITHUB_OUTPUT
-            echo "ecr_uri=${{ secrets.AWS_ECR_TRADER_URI }}" >> $GITHUB_OUTPUT
           else
             echo "env_type=dev" >> $GITHUB_OUTPUT
             echo "lambda_name=trader-lambda-dev" >> $GITHUB_OUTPUT
-            echo "ecr_uri=${{ secrets.AWS_ECR_TRADER_DEV_URI }}" >> $GITHUB_OUTPUT
           fi
 
   deploy:
     needs: init-version
     runs-on: ubuntu-latest
-    # env로 job 레벨 환경 변수 설정
-    env:
-      VERSION: ${{ needs.init-version.outputs.version }}
-      ENV_TYPE: ${{ needs.init-version.outputs.env_type }}
-      LAMBDA_NAME: ${{ needs.init-version.outputs.lambda_name }}
-      ECR_URI: ${{ needs.init-version.outputs.ecr_uri }}
     steps:
       - uses: actions/checkout@v4
       
+      # ECR URI를 조건문으로 직접 설정
+      - name: Set ECR URI
+        run: |
+          if [[ "${{ needs.init-version.outputs.env_type }}" == "prod" ]]; then
+            echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_URI }}" >> $GITHUB_ENV
+          else
+            echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_DEV_URI }}" >> $GITHUB_ENV
+          fi
+          echo "VERSION=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
+          echo "ENV_TYPE=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
+          echo "LAMBDA_NAME=${{ needs.init-version.outputs.lambda_name }}" >> $GITHUB_ENV
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
