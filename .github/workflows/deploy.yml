@@ -12,6 +12,12 @@ on:
 
 jobs:
   # 프로덕션(master) 배포 작업
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo
+        run: echo ${{ github.base_ref }}
+
   prod-deploy:
     if: github.base_ref == 'master'
     runs-on: ubuntu-latest
