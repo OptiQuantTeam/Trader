@@ -116,6 +116,7 @@ jobs:
           
           if [ "$STATUS_CODE" != "200" ] || [ ! -z "$FUNCTION_ERROR" ]; then
             echo "::error::개발 Lambda 테스트 실패"
+            echo $RESPONSE
             exit 1
           fi
 
