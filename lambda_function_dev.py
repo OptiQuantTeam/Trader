@@ -40,13 +40,10 @@ def lambda_handler(event, context):
         slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
 
         
-        if event.get('mode', None) == 'dev':
+        if event.get('mode', None) == 'test':
             price = client.futures_symbol_ticker(symbol=event['symbol'])['price']
             event['price'] = float(price)
-            #slackBot.send_message(event,resp=f"test2 : {event['mode']}, {event['price']}")
-            
-            #slackBot.send_message(resp=f"BTC 현재가격 : {event['price']}")
-        
+
         balance = client.futures_account_balance()
         usdt = float([asset['balance'] for asset in balance if asset['asset'] == 'USDT'][0])
         
@@ -78,7 +75,6 @@ def lambda_handler(event, context):
         response = {'statusCode': 200, 'body': 'success'}
     except Exception as e:
         response = {'statusCode': 400, 'body': e}
-        #response = slackBot.send_error(e)
     finally:
         return response
 
