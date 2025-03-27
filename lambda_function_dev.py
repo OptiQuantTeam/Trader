@@ -44,8 +44,8 @@ def lambda_handler(event, context):
             slackBot.send_message(resp=f"test2 : {event['mode']}")
             btc = client.futures_symbol_ticker(symbol="BTCUSDT")
             
-            event['price'] = float(btc['price'])
-            slackBot.send_message(resp=f"BTC 현재가격 : {event['price']}")
+            #event['price'] = float(btc['price'])
+            #slackBot.send_message(resp=f"BTC 현재가격 : {event['price']}")
         
         balance = client.futures_account_balance()
         usdt = float([asset['balance'] for asset in balance if asset['asset'] == 'USDT'][0])

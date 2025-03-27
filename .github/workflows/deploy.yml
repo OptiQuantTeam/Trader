@@ -107,7 +107,7 @@ jobs:
         run: |
           RESPONSE=$(aws lambda invoke \
             --function-name trader-lambda-dev \
-            --payload '{"mode": "dev","symbol": "BTCUSDT","side": "BUY","positionSide": "LONG","trade": "futures"}' \
+            --payload '{"mode": "dev","price": 84645,"symbol": "BTCUSDT","side": "BUY","positionSide": "LONG","trade": "futures"}' \
             --cli-binary-format raw-in-base64-out \
             output.json)
           
