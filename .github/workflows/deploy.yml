@@ -1,0 +1,74 @@
+name: AWS Lambda Build
+
+on:
+  pull_request:
+    branches:
+      - shin
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Docker image build
+        uses: actions/checkout@v4
+      
+      - name: Set version
+        run: |
+          version=$(TZ='Asia/Seoul' date +'%Y%m%d')
+          echo "version=${version}" >> $GITHUB_ENV
+
+      - name: authorize AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Docker image build
+        run: |
+          docker build -t trader-lambda:${version:-latest} --no-cache .
+          docker tag trader-lambda:${version:-latest} ${{ secrets.AWS_ECR_TRADER_URI }}:${{ env.version }}
+
+      - name: Docker image push
+        run: docker push ${{ secrets.AWS_ECR_TRADER_URI }}:${{ env.version }}
+
+      - name: Update Lambda Function Code
+        uses: aws-actions/aws-lambda-layer-ecr-build@v1
+        with:
+          image-uri: ${{ secrets.AWS_ECR_TRADER_URI }}:${{ env.version }}
+          function-name: trader-lambda
+          
+      - name: Lambda 함수 테스트 호출
+        id: lambda-test
+        run: |
+          # Lambda 함수 호출 및 결과 저장
+          RESPONSE=$(aws lambda invoke \
+            --function-name trader-lambda \
+            --payload '{"test": "true"}' \
+            --cli-binary-format raw-in-base64-out \
+            output.json)
+          
+          # 상태 코드 확인
+          STATUS_CODE=$(echo $RESPONSE | jq -r '.StatusCode')
+          
+          # 함수 실행 결과 확인
+          FUNCTION_ERROR=$(echo $RESPONSE | jq -r '.FunctionError // empty')
+          
+          # 결과 출력
+          echo "Lambda 호출 상태 코드: $STATUS_CODE"
+          echo "실행 결과:"
+          cat output.json
+          
+          # 에러 확인
+          if [ "$STATUS_CODE" != "200" ] || [ ! -z "$FUNCTION_ERROR" ]; then
+            echo "::error::Lambda 함수 테스트 실패"
+            echo "상태 코드: $STATUS_CODE"
+            echo "에러: $FUNCTION_ERROR"
+            exit 1
+          fi
+          
+          echo "Lambda 함수 테스트 성공"
