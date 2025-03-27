@@ -64,7 +64,7 @@ def lambda_handler(event, context):
                     newOrderRespType='FULL',
                     timestamp=server_timestamp)
                 
-                response = slackBot.send_message(event, 'dev 버전 test') 
+                response = slackBot.send_message(event, 'dev 버전 last test') 
 
             else:
                 raise Exception(f"Invalid Type : {event['type']}")

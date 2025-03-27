@@ -6,24 +6,24 @@ on:
       - master
       - develop
 
+
 jobs:
   # 프로덕션(master) 배포 작업
-  echo:
+  init-version:
     runs-on: ubuntu-latest
     steps:
-      - name: Echo
-        run: echo ${{ github.ref }}
+      - name: Set version
+        id: set-version
+        run: |
+          version=$(TZ='Asia/Seoul' date +'%Y%m%d')
+          echo "version=${version}" >> $GITHUB_OUTPUT
 
   prod-deploy:
+    needs: init-version
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set version
-        run: |
-          version=$(TZ='Asia/Seoul' date +'%Y%m%d')
-          echo "version=${version}" >> $GITHUB_ENV
       
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -39,14 +39,14 @@ jobs:
       - name: Build and Push Production Image
         run: |
           docker build -t trader-lambda:${version:-latest} --no-cache .
-          docker tag trader-lambda:${version:-latest} ${{ secrets.AWS_ECR_TRADER_URI }}:${{ env.version }}
-          docker push ${{ secrets.AWS_ECR_TRADER_URI }}:${{ env.version }}
+          docker tag trader-lambda:${version:-latest} ${{ secrets.AWS_ECR_TRADER_URI }}:${{ needs.init-version.outputs.version }}
+          docker push ${{ secrets.AWS_ECR_TRADER_URI }}:${{ needs.init-version.outputs.version }}
 
       - name: Update Production Lambda
         run: |
           aws lambda update-function-code \
             --function-name trader-lambda \
-            --image-uri ${{ secrets.AWS_ECR_TRADER_URI }}:${{ env.version }}
+            --image-uri ${{ secrets.AWS_ECR_TRADER_URI }}:${{ needs.init-version.outputs.version }}
 
       - name: Test Production Lambda
         run: |
@@ -71,11 +71,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Set version
-        run: |
-          version=$(TZ='Asia/Seoul' date +'%Y%m%d')
-          echo "version=${version}" >> $GITHUB_ENV
-      
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -90,14 +85,14 @@ jobs:
       - name: Build and Push Development Image
         run: |
           docker build -t trader-lambda-dev:${version:-latest} -f Dockerfile.dev --no-cache .
-          docker tag trader-lambda-dev:${version:-latest} ${{ secrets.AWS_ECR_TRADER_DEV_URI }}:${{ env.version }}
-          docker push ${{ secrets.AWS_ECR_TRADER_DEV_URI }}:${{ env.version }}
+          docker tag trader-lambda-dev:${version:-latest} ${{ secrets.AWS_ECR_TRADER_DEV_URI }}:${{ needs.init-version.outputs.version }}
+          docker push ${{ secrets.AWS_ECR_TRADER_DEV_URI }}:${{ needs.init-version.outputs.version }}
 
       - name: Update Development Lambda
         run: |
           aws lambda update-function-code \
             --function-name trader-lambda-dev \
-            --image-uri ${{ secrets.AWS_ECR_TRADER_DEV_URI }}:${{ env.version }}
+            --image-uri ${{ secrets.AWS_ECR_TRADER_DEV_URI }}:${{ needs.init-version.outputs.version }}
       
       - name: Wait for 30 seconds
         run: sleep 30
@@ -157,7 +152,7 @@ jobs:
                   },
                   {
                     \"title\": \"버전\",
-                    \"value\": \"${{ env.version }}\",
+                    \"value\": \"${{ needs.init-version.outputs.version }}\",
                     \"short\": true
                   }
                 ]
