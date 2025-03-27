@@ -15,7 +15,7 @@ jobs:
         run: echo ${{ github.ref }}
 
   prod-deploy:
-    if: github.ref == 'master'
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +66,7 @@ jobs:
 
   # 개발(develop) 배포 작업
   dev-deploy:
-    if: github.ref == 'develop'
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -124,7 +124,7 @@ jobs:
     steps:
       - name: Slack 알림 전송
         run: |
-          if [ "${{ github.ref }}" = "master" ]; then
+          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
             ENV="프로덕션"
             RESULT="${{ needs.prod-deploy.result }}"
           else
