@@ -6,68 +6,43 @@ on:
       - master
       - develop
 
-
 jobs:
-  # 프로덕션(master) 배포 작업
   init-version:
     runs-on: ubuntu-latest
+    outputs:  # job 출력 변수 정의
+      version: ${{ steps.set-version.outputs.version }}
+      env_type: ${{ steps.set-env.outputs.env_type }}
+      lambda_name: ${{ steps.set-env.outputs.lambda_name }}
+      ecr_uri: ${{ steps.set-env.outputs.ecr_uri }}
     steps:
       - name: Set version
         id: set-version
         run: |
           version=$(TZ='Asia/Seoul' date +'%Y%m%d')
           echo "version=${version}" >> $GITHUB_OUTPUT
-
-  prod-deploy:
-    needs: init-version
-    if: github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
       
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Build and Push Production Image
+      - name: Set environment variables
+        id: set-env
         run: |
-          docker build -t trader-lambda:${version:-latest} --no-cache .
-          docker tag trader-lambda:${version:-latest} ${{ secrets.AWS_ECR_TRADER_URI }}:${{ needs.init-version.outputs.version }}
-          docker push ${{ secrets.AWS_ECR_TRADER_URI }}:${{ needs.init-version.outputs.version }}
-
-      - name: Update Production Lambda
-        run: |
-          aws lambda update-function-code \
-            --function-name trader-lambda \
-            --image-uri ${{ secrets.AWS_ECR_TRADER_URI }}:${{ needs.init-version.outputs.version }}
-
-      - name: Test Production Lambda
-        run: |
-          RESPONSE=$(aws lambda invoke \
-            --function-name trader-lambda \
-            --payload '{"mode": "test","symbol": "BTCUSDT","side": "BUY","positionSide": "LONG","trade": "futures"}' \
-            --cli-binary-format raw-in-base64-out \
-            output.json)
-          
-          STATUS_CODE=$(echo $RESPONSE | jq -r '.StatusCode')
-          FUNCTION_ERROR=$(echo $RESPONSE | jq -r '.FunctionError // empty')
-          
-          if [ "$STATUS_CODE" != "200" ] || [ ! -z "$FUNCTION_ERROR" ]; then
-            echo "::error::프로덕션 Lambda 테스트 실패"
-            exit 1
+          if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            echo "env_type=prod" >> $GITHUB_OUTPUT
+            echo "lambda_name=trader-lambda" >> $GITHUB_OUTPUT
+            echo "ecr_uri=${{ secrets.AWS_ECR_TRADER_URI }}" >> $GITHUB_OUTPUT
+          else
+            echo "env_type=dev" >> $GITHUB_OUTPUT
+            echo "lambda_name=trader-lambda-dev" >> $GITHUB_OUTPUT
+            echo "ecr_uri=${{ secrets.AWS_ECR_TRADER_DEV_URI }}" >> $GITHUB_OUTPUT
           fi
 
-  # 개발(develop) 배포 작업
-  dev-deploy:
-    if: github.ref == 'refs/heads/develop'
+  deploy:
+    needs: init-version
     runs-on: ubuntu-latest
+    # env로 job 레벨 환경 변수 설정
+    env:
+      VERSION: ${{ needs.init-version.outputs.version }}
+      ENV_TYPE: ${{ needs.init-version.outputs.env_type }}
+      LAMBDA_NAME: ${{ needs.init-version.outputs.lambda_name }}
+      ECR_URI: ${{ needs.init-version.outputs.ecr_uri }}
     steps:
       - uses: actions/checkout@v4
       
@@ -79,28 +54,37 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build and Push Development Image
+      - name: Build and Push Image
         run: |
-          docker build -t trader-lambda-dev:${version:-latest} -f Dockerfile.dev --no-cache .
-          docker tag trader-lambda-dev:${version:-latest} ${{ secrets.AWS_ECR_TRADER_DEV_URI }}:${{ needs.init-version.outputs.version }}
-          docker push ${{ secrets.AWS_ECR_TRADER_DEV_URI }}:${{ needs.init-version.outputs.version }}
+          # 환경 변수 사용
+          echo "Building for $ENV_TYPE environment"
+          echo "Version: $VERSION"
+          
+          # Dockerfile 선택
+          DOCKERFILE=$([[ "$ENV_TYPE" == "prod" ]] && echo "Dockerfile" || echo "Dockerfile.dev")
+          
+          # 이미지 빌드 및 푸시
+          docker build -t $LAMBDA_NAME:$VERSION -f $DOCKERFILE --no-cache .
+          docker tag $LAMBDA_NAME:$VERSION $ECR_URI:$VERSION
+          docker push $ECR_URI:$VERSION
 
-      - name: Update Development Lambda
+      - name: Update Lambda
         run: |
           aws lambda update-function-code \
-            --function-name trader-lambda-dev \
-            --image-uri ${{ secrets.AWS_ECR_TRADER_DEV_URI }}:${{ needs.init-version.outputs.version }}
-      
-      - name: Wait for 30 seconds
-        run: sleep 30
+            --function-name $LAMBDA_NAME \
+            --image-uri $ECR_URI:$VERSION
 
-      - name: Test Development Lambda
+      - name: Wait for Lambda Update
+        run: |
+          echo "Lambda 업데이트 후 30초 대기..."
+          sleep 30
+
+      - name: Test Lambda
         run: |
           RESPONSE=$(aws lambda invoke \
-            --function-name trader-lambda-dev \
+            --function-name $LAMBDA_NAME \
             --payload '{"mode": "test","symbol": "BTCUSDT","side": "BUY","positionSide": "LONG","trade": "futures"}' \
             --cli-binary-format raw-in-base64-out \
             output.json)
@@ -109,28 +93,26 @@ jobs:
           FUNCTION_ERROR=$(echo $RESPONSE | jq -r '.FunctionError // empty')
           
           if [ "$STATUS_CODE" != "200" ] || [ ! -z "$FUNCTION_ERROR" ]; then
-            echo "::error::개발 Lambda 테스트 실패"
+            echo "::error::Lambda 테스트 실패 ($ENV_TYPE)"
             echo $RESPONSE
             exit 1
           fi
 
-  # 공통 알림 작업
   notify:
-    needs: [prod-deploy, dev-deploy]
+    needs: [init-version, deploy]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Slack 알림 전송
+        env:
+          VERSION: ${{ needs.init-version.outputs.version }}
+          ENV_TYPE: ${{ needs.init-version.outputs.env_type }}
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
-            ENV="프로덕션"
-            RESULT="${{ needs.prod-deploy.result }}"
-          else
-            ENV="개발"
-            RESULT="${{ needs.dev-deploy.result }}"
-          fi
-
-          if [ "$RESULT" = "success" ]; then
+          # 환경 표시 텍스트
+          ENV_TEXT=$([[ "$ENV_TYPE" == "prod" ]] && echo "프로덕션" || echo "개발")
+          
+          # 결과 상태
+          if [ "${{ needs.deploy.result }}" = "success" ]; then
             COLOR="good"
             STATUS="성공"
           else
@@ -143,7 +125,7 @@ jobs:
             \"attachments\": [
               {
                 \"color\": \"$COLOR\",
-                \"title\": \"$ENV 환경 배포 $STATUS\",
+                \"title\": \"$ENV_TEXT 환경 배포 $STATUS\",
                 \"fields\": [
                   {
                     \"title\": \"브랜치\",
@@ -152,7 +134,7 @@ jobs:
                   },
                   {
                     \"title\": \"버전\",
-                    \"value\": \"${{ needs.init-version.outputs.version }}\",
+                    \"value\": \"$VERSION\",
                     \"short\": true
                   }
                 ]
