@@ -3,6 +3,10 @@ name: AWS Lambda Build
 on:
   pull_request:
     branches:
+      - master
+  
+  push:
+    branches:
       - shin
 
 jobs:
