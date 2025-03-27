@@ -12,6 +12,12 @@ on:
 
 jobs:
   # 프로덕션(master) 배포 작업
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo
+        run: echo ${{ github.base_ref }}
+
   prod-deploy:
     if: github.base_ref == 'master'
     runs-on: ubuntu-latest
@@ -101,7 +107,7 @@ jobs:
         run: |
           RESPONSE=$(aws lambda invoke \
             --function-name trader-lambda-dev \
-            --payload '{"test": true,"symbol": "BTCUSDT","side": "BUY","positionSide": "LONG","trade": "futures"}' \
+            --payload '{"mode": "dev","price": 84645,"symbol": "BTCUSDT","side": "BUY","positionSide": "LONG","trade": "futures"}' \
             --cli-binary-format raw-in-base64-out \
             output.json)
           
@@ -110,6 +116,7 @@ jobs:
           
           if [ "$STATUS_CODE" != "200" ] || [ ! -z "$FUNCTION_ERROR" ]; then
             echo "::error::개발 Lambda 테스트 실패"
+            echo $RESPONSE
             exit 1
           fi
 

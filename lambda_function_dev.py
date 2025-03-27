@@ -39,11 +39,14 @@ def lambda_handler(event, context):
         client = Client(config['api_key'], config['secret_key'])
         slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
 
-        
-        if event['test']:
-            btc = client.futures_historical_klines(symbol='BTCUSDT', interval='1m', start_str=str(int(datetime.datetime.now().timestamp() * 1000)), limit=1)
-            event['price'] = float(btc[0][4])
-        
+        '''
+        if event.get('mode', None) == 'dev':
+            slackBot.send_message(resp=f"test2 : {event['mode']}")
+            price = client.futures_symbol_ticker(symbol=event['symbol'])['price']
+            
+            event['price'] = float(price)
+            #slackBot.send_message(resp=f"BTC 현재가격 : {event['price']}")
+        '''
         balance = client.futures_account_balance()
         usdt = float([asset['balance'] for asset in balance if asset['asset'] == 'USDT'][0])
         
@@ -64,17 +67,19 @@ def lambda_handler(event, context):
                     newOrderRespType='FULL',
                     timestamp=server_timestamp)
                 
-                        
+                response = slackBot.send_message(event, order) 
+
             else:
                 raise Exception(f"Invalid Type : {event['type']}")
 
         else:
             raise Exception(f"Invalid Trade : {event['trade']}")
 
-        response = 'success'
+        #response = {'statusCode': 200, 'body': 'success'}
     except Exception as e:
-        response = e
-    finally:    
-        return response
+        #response = {'statusCode': 400, 'body': e}
+        response = slackBot.send_error(e)
+
+    return response
 
 
