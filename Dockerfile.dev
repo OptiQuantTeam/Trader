@@ -6,10 +6,10 @@ RUN pip3 install --upgrade pip
 
 WORKDIR ${LAMBDA_TASK_ROOT}
 
-RUN git clone -b master https://github.com/OptiQuantTeam/Trader.git .
+RUN git clone -b develop https://github.com/OptiQuantTeam/Trader.git .
 
 COPY requirement.txt ${LAMBDA_TASK_ROOT}
 RUN pip3 install --no-cache-dir -r ${LAMBDA_TASK_ROOT}/requirement.txt
 
 
-CMD [ "lambda_function.lambda_handler" ]
+CMD [ "lambda_function_dev.lambda_handler" ]
