@@ -98,6 +98,7 @@ jobs:
           aws lambda update-function-code \
             --function-name trader-lambda-dev \
             --image-uri ${{ secrets.AWS_ECR_TRADER_DEV_URI }}:${{ env.version }}
+          sleep 15
 
       - name: Test Development Lambda
         run: |

@@ -43,7 +43,7 @@ def lambda_handler(event, context):
         if event.get('mode', None) == 'dev':
             price = client.futures_symbol_ticker(symbol=event['symbol'])['price']
             event['price'] = float(price)
-            slackBot.send_message(event,resp=f"test2 : {event['mode']}, {event['price']}")
+            #slackBot.send_message(event,resp=f"test2 : {event['mode']}, {event['price']}")
             
             #slackBot.send_message(resp=f"BTC 현재가격 : {event['price']}")
         
@@ -67,7 +67,7 @@ def lambda_handler(event, context):
                     newOrderRespType='FULL',
                     timestamp=server_timestamp)
                 
-                response = slackBot.send_message(event, order) 
+                response = slackBot.send_message(event, 'dev 버전 test') 
 
             else:
                 raise Exception(f"Invalid Type : {event['type']}")
@@ -75,11 +75,11 @@ def lambda_handler(event, context):
         else:
             raise Exception(f"Invalid Trade : {event['trade']}")
 
-        #response = {'statusCode': 200, 'body': 'success'}
+        response = {'statusCode': 200, 'body': 'success'}
     except Exception as e:
-        #response = {'statusCode': 400, 'body': e}
-        response = slackBot.send_error(e)
-
-    return response
+        response = {'statusCode': 400, 'body': e}
+        #response = slackBot.send_error(e)
+    finally:
+        return response
 
 
