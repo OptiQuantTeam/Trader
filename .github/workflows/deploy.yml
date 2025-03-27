@@ -12,10 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Echo
-        run: echo ${{ github.base_ref }}
+        run: echo ${{ github.ref }}
 
   prod-deploy:
-    if: github.base_ref == 'master'
+    if: github.ref == 'master'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +66,7 @@ jobs:
 
   # 개발(develop) 배포 작업
   dev-deploy:
-    if: github.base_ref == 'develop'
+    if: github.ref == 'develop'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -124,7 +124,7 @@ jobs:
     steps:
       - name: Slack 알림 전송
         run: |
-          if [ "${{ github.base_ref }}" = "master" ]; then
+          if [ "${{ github.ref }}" = "master" ]; then
             ENV="프로덕션"
             RESULT="${{ needs.prod-deploy.result }}"
           else
@@ -149,7 +149,7 @@ jobs:
                 \"fields\": [
                   {
                     \"title\": \"브랜치\",
-                    \"value\": \"${{ github.base_ref }}\",
+                    \"value\": \"${{ github.ref }}\",
                     \"short\": true
                   },
                   {
