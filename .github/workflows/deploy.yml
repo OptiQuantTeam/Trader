@@ -66,9 +66,9 @@ jobs:
           DOCKERFILE=$([[ "$ENV_TYPE" == "prod" ]] && echo "Dockerfile" || echo "Dockerfile.dev")
           
           # 이미지 빌드 및 푸시
-          docker build -t $LAMBDA_NAME:$VERSION -f $DOCKERFILE --no-cache .
-          docker tag $LAMBDA_NAME:$VERSION $ECR_URI:$VERSION
-          docker push $ECR_URI:$VERSION
+          docker build -t ${LAMBDA_NAME}:${VERSION} -f ${DOCKERFILE} --no-cache .
+          docker tag ${LAMBDA_NAME}:${VERSION} ${ECR_URI}:${VERSION}
+          docker push ${ECR_URI}:${VERSION}
 
       - name: Update Lambda
         run: |
