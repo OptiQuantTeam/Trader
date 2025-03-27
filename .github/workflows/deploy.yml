@@ -22,7 +22,7 @@ jobs:
           echo "version=${version}" >> $GITHUB_ENV
       
       - name: echo
-        run: echo ls -al
+        run: ls -al
 
       - name: authorize AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
