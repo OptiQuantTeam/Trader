@@ -67,17 +67,19 @@ def lambda_handler(event, context):
                     newOrderRespType='FULL',
                     timestamp=server_timestamp)
                 
-                        
+                response = slackBot.send_message(event, order) 
+
             else:
                 raise Exception(f"Invalid Type : {event['type']}")
 
         else:
             raise Exception(f"Invalid Trade : {event['trade']}")
 
-        response = {'statusCode': 200, 'body': 'success'}
+        #response = {'statusCode': 200, 'body': 'success'}
     except Exception as e:
-        response = {'statusCode': 400, 'body': e}
-    finally:    
-        return response
+        #response = {'statusCode': 400, 'body': e}
+        response = slackBot.send_error(e)
+
+    return response
 
 
