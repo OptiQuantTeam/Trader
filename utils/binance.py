@@ -18,6 +18,7 @@ def futures_market_params(event, config, asset):
             'quantity' : quantity
             }
 
+
 def futures_limit_params(event, config, asset):
     quantity = '{:.8f}'.format((float(asset)*float(config['ratio']))/(float(event['price'])*100))
     

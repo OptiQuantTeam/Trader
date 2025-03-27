@@ -1,13 +1,12 @@
 import json
 import os
 from dotenv import load_dotenv
-
+import datetime
 from binance.client import Client
 from binance.enums import *
 
 import utils
 from utils import SlackBot
-
 
 
 '''
@@ -40,6 +39,11 @@ def lambda_handler(event, context):
         client = Client(config['api_key'], config['secret_key'])
         slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
 
+        
+        if event['test']:
+            btc = client.futures_historical_klines(symbol='BTCUSDT', interval='1m', start_str=str(int(datetime.datetime.now().timestamp() * 1000)), limit=1)
+            event['price'] = float(btc[0][4])
+        
         balance = client.futures_account_balance()
         usdt = float([asset['balance'] for asset in balance if asset['asset'] == 'USDT'][0])
         
@@ -51,60 +55,26 @@ def lambda_handler(event, context):
             
             if config['type'] == 'MARKET':
                 params = utils.futures_market_params(event=event, config=config, asset=usdt)
-                #futures_create_order
                 order = client.futures_create_test_order(
                     symbol=params['symbol'],
                     side=params['side'],
                     positionSide=params['positionSide'],
                     type=params['type'],
                     quantity=1,
-                    #quantity=params['quantity'],
                     newOrderRespType='FULL',
                     timestamp=server_timestamp)
                 
-                response = slackBot.send_message(event, order)  
-                
+                        
             else:
                 raise Exception(f"Invalid Type : {event['type']}")
-            '''
-            if event['side'] == 'BUY':
-                sl = client.futures_create_test_order(
-                    symbol=params['symbol'],
-                    side='SELL',
-                    positionSide=params['positionSide'],
-                    type='STOP_MARKET',
-                    stopprice=params['sl'],
-                    quantity=1,
-                    #quantity=params['quantity'],
-                    newOrderRespType='FULL',
-                    timestamp=server_timestamp)
-                
-                tp = client.futures_create_test_order(
-                    symbol=params['symbol'],
-                    side='SELL',
-                    positionSide=params['positionSide'],
-                    type='TAKE_PROFIT_MARKET',
-                    stopprice=params['tp'],
-                    quantity=1,
-                    #quantity=params['quantity'],
-                    newOrderRespType='FULL',
-                    timestamp=server_timestamp)
-                response = slackBot.send_message(event, order, sl, tp)
-                    
-            elif event['side'] == 'SELL':
-                response = slackBot.send_message(event, order)  
 
-            else:
-                raise Exception(f"Invalid Side : {event['side']}")
-            ''' 
-        
         else:
             raise Exception(f"Invalid Trade : {event['trade']}")
 
+        response = 'success'
     except Exception as e:
-        print(e)
-        return slackBot.send_error(e)
-    
-    return response
+        response = e
+    finally:    
+        return response
 
 

@@ -1,5 +1,4 @@
 import slack_sdk
-import json
 
 class SlackBot():
     def __init__(self, BOT_TOKEN, CHANNEL, USER_ID=None):
@@ -20,7 +19,7 @@ class SlackBot():
             channel=self.channel,
             text=slack_msg
         )
-        print(response.data)
+        
         return {
             'statusCode' : 200,
             'body': 'send message success'
