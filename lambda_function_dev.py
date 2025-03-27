@@ -39,10 +39,10 @@ def lambda_handler(event, context):
         client = Client(config['api_key'], config['secret_key'])
         slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
 
-        #slackBot.send_message(resp=f"test1 : {event['mode']}")
-        #if event['mode'] == 'dev':
-        #    slackBot.send_message(resp=f"test2 : {event['mode']}")
-        #    price = client.futures_symbol_ticker(symbol=event['symbol'])['price']
+        slackBot.send_message(resp=f"test1 : {event['mode']}")
+        if event['mode'] == 'dev':
+            slackBot.send_message(resp=f"test2 : {event['mode']}")
+            price = client.futures_symbol_ticker(symbol=event['symbol'])['price']
             
             #event['price'] = float(btc['price'])
             #slackBot.send_message(resp=f"BTC 현재가격 : {event['price']}")
@@ -74,9 +74,9 @@ def lambda_handler(event, context):
         else:
             raise Exception(f"Invalid Trade : {event['trade']}")
 
-        response = 'success'
+        response = {'statusCode': 200, 'body': 'success'}
     except Exception as e:
-        response = e
+        response = {'statusCode': 400, 'body': e}
     finally:    
         return response
 
