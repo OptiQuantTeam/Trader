@@ -52,7 +52,7 @@ jobs:
         run: |
           RESPONSE=$(aws lambda invoke \
             --function-name trader-lambda \
-            --payload '{"price": 84645,"symbol": "BTCUSDT","side": "BUY","positionSide": "LONG","trade": "futures"}' \
+            --payload '{"mode": "test","symbol": "BTCUSDT","side": "BUY","positionSide": "LONG","trade": "futures"}' \
             --cli-binary-format raw-in-base64-out \
             output.json)
           
@@ -98,13 +98,15 @@ jobs:
           aws lambda update-function-code \
             --function-name trader-lambda-dev \
             --image-uri ${{ secrets.AWS_ECR_TRADER_DEV_URI }}:${{ env.version }}
-          sleep 15
+      
+      - name: Wait for 30 seconds
+        run: sleep 30
 
       - name: Test Development Lambda
         run: |
           RESPONSE=$(aws lambda invoke \
             --function-name trader-lambda-dev \
-            --payload '{"mode": "dev","symbol": "BTCUSDT","side": "BUY","positionSide": "LONG","trade": "futures"}' \
+            --payload '{"mode": "test","symbol": "BTCUSDT","side": "BUY","positionSide": "LONG","trade": "futures"}' \
             --cli-binary-format raw-in-base64-out \
             output.json)
           

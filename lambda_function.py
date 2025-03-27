@@ -39,7 +39,11 @@ def lambda_handler(event, context):
         config = utils.get_configure(AWS_USER_ID)
         client = Client(config['api_key'], config['secret_key'])
         slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
-
+        
+        if event.get('mode', None) == 'test':
+            price = client.futures_symbol_ticker(symbol=event['symbol'])['price']
+            event['price'] = float(price)
+        
         balance = client.futures_account_balance()
         usdt = float([asset['balance'] for asset in balance if asset['asset'] == 'USDT'][0])
         
