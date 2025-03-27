@@ -40,7 +40,7 @@ def lambda_handler(event, context):
         slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
 
         
-        if event['test']:
+        if event['test'] == True:
             btc = client.futures_historical_klines(symbol='BTCUSDT', interval='1m', start_str=str(int(datetime.datetime.now().timestamp() * 1000)), limit=1)
             event['price'] = float(btc[0][4])
         
