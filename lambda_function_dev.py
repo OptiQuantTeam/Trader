@@ -38,11 +38,11 @@ def lambda_handler(event, context):
         config = utils.get_configure(AWS_USER_ID)
         client = Client(config['api_key'], config['secret_key'])
         slackBot = SlackBot(config['slack_token'], config['slack_channel'], config['slack_user'])
-
+        info = event['info']
         
         if event.get('mode', None) == 'test':
-            price = client.futures_symbol_ticker(symbol=event['symbol'])['price']
-            event['price'] = float(price)
+            price = client.futures_symbol_ticker(symbol=info['symbol'])['price']
+            info['price'] = float(price)
 
         balance = client.futures_account_balance()
         usdt = float([asset['balance'] for asset in balance if asset['asset'] == 'USDT'][0])
@@ -50,11 +50,11 @@ def lambda_handler(event, context):
         server_time = client.get_server_time()
         server_timestamp = server_time['serverTime']
         
-        if event['trade'] == 'futures':
-            client.futures_change_leverage(leverage=int(config['leverage']), symbol=event['symbol'])
+        if info['trade'] == 'futures':
+            client.futures_change_leverage(leverage=int(config['leverage']), symbol=info['symbol'])
             
             if config['type'] == 'MARKET':
-                params = utils.futures_market_params(event=event, config=config, asset=usdt)
+                params = utils.futures_market_params(info=info, config=config, asset=usdt)
                 order = client.futures_create_test_order(
                     symbol=params['symbol'],
                     side=params['side'],
@@ -64,13 +64,13 @@ def lambda_handler(event, context):
                     newOrderRespType='FULL',
                     timestamp=server_timestamp)
                 
-                response = slackBot.send_message(event, 'dev 버전 last test') 
+                response = slackBot.send_message(info, 'dev 버전 last test') 
 
             else:
-                raise Exception(f"Invalid Type : {event['type']}")
+                raise Exception(f"Invalid Type : {info['type']}")
 
         else:
-            raise Exception(f"Invalid Trade : {event['trade']}")
+            raise Exception(f"Invalid Trade : {info['trade']}")
 
         response = {'statusCode': 200, 'body': 'success'}
     except Exception as e:
