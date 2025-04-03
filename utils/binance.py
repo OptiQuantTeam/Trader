@@ -1,17 +1,17 @@
 
-def futures_market_params(event, config, asset):
-    quantity = '{:.8f}'.format((float(asset)*float(config['ratio']))/(float(event['price'])*100))
+def futures_market_params(info, config, asset):
+    quantity = '{:.8f}'.format((float(asset)*float(config['ratio']))/(float(info['price'])*100))
     
-    sl = float(config['sl']) if event['positionSide'] == 'LONG' else -float(config['sl'])
-    tp = float(config['tp']) if event['positionSide'] == 'LONG' else -float(config['tp'])
+    sl = float(config['sl']) if info['positionSide'] == 'LONG' else -float(config['sl'])
+    tp = float(config['tp']) if info['positionSide'] == 'LONG' else -float(config['tp'])
     
-    slprice = event['price']*(1-sl/(float(config['leverage'])*100))
-    tpprice = event['price']*(1+tp/(float(config['leverage'])*100))
+    slprice = info['price']*(1-sl/(float(config['leverage'])*100))
+    tpprice = info['price']*(1+tp/(float(config['leverage'])*100))
 
     return {
-            'symbol': event['symbol'],
-            'side' : event['side'],
-            'positionSide' : event['positionSide'],
+            'symbol': info['symbol'],
+            'side' : info['side'],
+            'positionSide' : info['positionSide'],
             'type' : config['type'],
             'sl' : slprice,
             'tp' : tpprice,
@@ -19,53 +19,53 @@ def futures_market_params(event, config, asset):
             }
 
 
-def futures_limit_params(event, config, asset):
-    quantity = '{:.8f}'.format((float(asset)*float(config['ratio']))/(float(event['price'])*100))
+def futures_limit_params(info, config, asset):
+    quantity = '{:.8f}'.format((float(asset)*float(config['ratio']))/(float(info['price'])*100))
     
-    sl = float(config['sl']) if event['positionSide'] == 'LONG' else -float(config['sl'])
-    tp = float(config['tp']) if event['positionSide'] == 'LONG' else -float(config['tp'])
+    sl = float(config['sl']) if info['positionSide'] == 'LONG' else -float(config['sl'])
+    tp = float(config['tp']) if info['positionSide'] == 'LONG' else -float(config['tp'])
     
-    slprice = event['price']*(1-sl/(float(config['leverage'])*100))
-    tpprice = event['price']*(1+tp/(float(config['leverage'])*100))
+    slprice = info['price']*(1-sl/(float(config['leverage'])*100))
+    tpprice = info['price']*(1+tp/(float(config['leverage'])*100))
     
     return {
-            'symbol': event['symbol'],
-            'side' : event['side'],
-            'positionSide' : event['positionSide'],
+            'symbol': info['symbol'],
+            'side' : info['side'],
+            'positionSide' : info['positionSide'],
             'type' : config['type'],
             'quantity' : quantity,
-            'price' : event['price'],
+            'price' : info['price'],
             'sl' : slprice,
             'tp' : tpprice
             }
 
-def spot_market_params(event, config, asset):
-    quantity = '{:.8f}'.format((float(asset)*float(config['ratio']))/(float(event['price'])*100))
+def spot_market_params(info, config, asset):
+    quantity = '{:.8f}'.format((float(asset)*float(config['ratio']))/(float(info['price'])*100))
     
-    slprice = event['price']*(1-float(config['sl'])/(float(config['leverage'])*100))
-    tpprice = event['price']*(1+float(config['tp'])/(float(config['leverage'])*100))
+    slprice = info['price']*(1-float(config['sl'])/(float(config['leverage'])*100))
+    tpprice = info['price']*(1+float(config['tp'])/(float(config['leverage'])*100))
 
     return {
-            'symbol': event['symbol'],
-            'side' : event['side'],
+            'symbol': info['symbol'],
+            'side' : info['side'],
             'type' : config['type'],
             'quantity' : quantity,
             'sl' : slprice,
             'tp' : tpprice
             }
 
-def spot_limit_params(event, config, asset):
-    quantity = '{:.8f}'.format((float(asset)*float(config['ratio']))/(float(event['price'])*100))
+def spot_limit_params(info, config, asset):
+    quantity = '{:.8f}'.format((float(asset)*float(config['ratio']))/(float(info['price'])*100))
     
-    slprice = event['price']*(1-float(config['sl'])/(float(config['leverage'])*100))
-    tpprice = event['price']*(1+float(config['tp'])/(float(config['leverage'])*100))
+    slprice = info['price']*(1-float(config['sl'])/(float(config['leverage'])*100))
+    tpprice = info['price']*(1+float(config['tp'])/(float(config['leverage'])*100))
 
     return {
-            'symbol': event['symbol'],
-            'side' : event['side'],
+            'symbol': info['symbol'],
+            'side' : info['side'],
             'type' : config['type'],
             'quantity' : quantity,
-            'price' : event['price'],
+            'price' : info['price'],
             'sl' : slprice,
             'tp' : tpprice
             }
