@@ -32,7 +32,7 @@ jobs:
     needs: init-version
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.set-var.outputs.TAG }}
+      tag: ${{ steps.set-var.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
       
@@ -44,9 +44,9 @@ jobs:
           echo "VERSION=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
           echo "ENV_TYPE=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
           if [[ "${{ needs.init-version.outputs.env_type }}" == "prod" ]]; then
-            echo "TAG=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
+            echo "tag=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
           else
-            echo "TAG=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
+            echo "tag=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
           fi
 
       - name: Configure AWS Credentials
