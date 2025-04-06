@@ -92,9 +92,9 @@ jobs:
       - name: Build and Push Image
         run: |
           DOCKERFILE=$([[ "$ENV_TYPE" == "prod" ]] && echo "Dockerfile" || echo "Dockerfile.dev")
-          docker build -t ${IMAGE_NAME}:${TAG} -f ${DOCKERFILE} --no-cache .
-          docker tag ${IMAGE_NAME}:${TAG} ${ECR_URI}:${TAG}
-          docker push ${ECR_URI}:${TAG}
+          docker build -t ${IMAGE_NAME}:${tag} -f ${DOCKERFILE} --no-cache .
+          docker tag ${IMAGE_NAME}:${tag} ${ECR_URI}:${tag}
+          docker push ${ECR_URI}:${tag}
 
 
   deploy:
