@@ -40,14 +40,15 @@ jobs:
       
       - name: Set Environment Variables
         run: |
-          if [[ "${{ needs.init-version.outputs.env_type }}" == "prod" ]]; then
-            echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_URI }}" >> $GITHUB_ENV
-          else
-            echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_DEV_URI }}" >> $GITHUB_ENV
-          fi
+          echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_URI }}" >> $GITHUB_ENV
           echo "LAMBDA_NAME=trader-lambda-${{ matrix.lambda }}" >> $GITHUB_ENV
           echo "VERSION=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
           echo "ENV_TYPE=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
+          if [[ "${{ needs.init-version.outputs.env_type }}" == "prod" ]]; then
+            echo "TAG=${VERSION}" >> $GITHUB_ENV
+          else
+            echo "TAG=${ENV_TYPE}" >> $GITHUB_ENV
+          fi
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -64,18 +65,24 @@ jobs:
           REPO_NAME=$(echo $ECR_URI | cut -d'/' -f2-)
           echo "리포지토리: $REPO_NAME"
           
-          # 환경에 따른 태그 필터 설정
-          TAG_FILTER=$([[ "${{ needs.init-version.outputs.env_type }}" == "prod" ]] && echo "prod" || echo "dev")
-          echo "삭제할 이미지 태그 필터: $TAG_FILTER"
-          
-          # 태그에 prod 또는 dev가 포함된 이미지만 필터링하여 가져오기
-          IMAGE_DIGESTS=$(aws ecr describe-images \
-            --repository-name $REPO_NAME \
-            --query "imageDetails[?contains(imageTags[0], '${TAG_FILTER}')].[imageDigest]" \
-            --output text)
+          if [[ "${{ needs.init-version.outputs.env_type }}" == "prod" ]]; then
+            # master 브랜치: YYYYMMDD 형식의 태그를 가진 이미지 삭제
+            echo "날짜 형식 태그를 가진 이미지 검색 중..."
+            IMAGE_DIGESTS=$(aws ecr describe-images \
+              --repository-name $REPO_NAME \
+              --query 'imageDetails[?contains(imageTags[0], `2`) && length(imageTags[0])==8].[imageDigest]' \
+              --output text)
+          else
+            # develop 브랜치: dev 태그를 가진 이미지 삭제
+            echo "dev 태그를 가진 이미지 검색 중..."
+            IMAGE_DIGESTS=$(aws ecr describe-images \
+              --repository-name $REPO_NAME \
+              --query 'imageDetails[?imageTags[0]==`dev`].[imageDigest]' \
+              --output text)
+          fi
           
           if [ ! -z "$IMAGE_DIGESTS" ]; then
-            echo "${TAG_FILTER} 태그를 포함한 이미지 삭제 중..."
+            echo "이미지 삭제 중..."
             for digest in $IMAGE_DIGESTS; do
               aws ecr batch-delete-image \
                 --repository-name $REPO_NAME \
@@ -97,20 +104,20 @@ jobs:
           DOCKERFILE=$([[ "$ENV_TYPE" == "prod" ]] && echo "Dockerfile" || echo "Dockerfile.dev")
           
           # 이미지 빌드 및 푸시
-          docker build -t ${LAMBDA_NAME}:${VERSION}-${ENV_TYPE} -f ${DOCKERFILE} --no-cache .
+          docker build -t ${LAMBDA_NAME}:${TAG} -f ${DOCKERFILE} --no-cache .
           echo "build success"
-          echo "${LAMBDA_NAME}:${VERSION}-${ENV_TYPE}" 
-          echo "${ECR_URI}:${VERSION}-${ENV_TYPE}"
-          docker tag ${LAMBDA_NAME}:${VERSION}-${ENV_TYPE} ${ECR_URI}:${VERSION}-${ENV_TYPE}
+          echo "${LAMBDA_NAME}:${TAG}" 
+          echo "${ECR_URI}:${TAG}"
+          docker tag ${LAMBDA_NAME}:${TAG} ${ECR_URI}:${TAG}
           echo "tag success"
-          docker push ${ECR_URI}:${VERSION}-${ENV_TYPE}
+          docker push ${ECR_URI}:${TAG}
           echo "push success"
 
       - name: Update Lambda
         run: |
           aws lambda update-function-code \
             --function-name $LAMBDA_NAME \
-            --image-uri $ECR_URI:${VERSION}-${ENV_TYPE}
+            --image-uri $ECR_URI:${TAG}
 
       - name: Wait for Lambda Update
         run: |
