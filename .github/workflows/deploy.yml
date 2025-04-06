@@ -31,19 +31,21 @@ jobs:
   deploy:
     needs: init-version
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Variables에서 직접 Lambda 이름 사용
+        lambda: ${{ github.ref == 'refs/heads/master' && vars.PROD_LAMBDA_NAMES || vars.DEV_LAMBDA_NAME }}
     steps:
       - uses: actions/checkout@v4
       
-      # ECR URI를 조건문으로 직접 설정
-      - name: Set ECR URI
+      - name: Set Environment Variables
         run: |
           if [[ "${{ needs.init-version.outputs.env_type }}" == "prod" ]]; then
             echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_URI }}" >> $GITHUB_ENV
-            echo "LAMBDA_NAME=${{ secrets.AWS_LAMBDA_TRADER_NAME }}" >> $GITHUB_ENV
           else
             echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_DEV_URI }}" >> $GITHUB_ENV
-            echo "LAMBDA_NAME=${{ secrets.AWS_LAMBDA_TRADER_DEV_NAME }}" >> $GITHUB_ENV
           fi
+          echo "LAMBDA_NAME=${{ matrix.lambda }}" >> $GITHUB_ENV
           echo "VERSION=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
           echo "ENV_TYPE=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
 
@@ -91,20 +93,20 @@ jobs:
           DOCKERFILE=$([[ "$ENV_TYPE" == "prod" ]] && echo "Dockerfile" || echo "Dockerfile.dev")
           
           # 이미지 빌드 및 푸시
-          docker build -t ${LAMBDA_NAME}:${VERSION} -f ${DOCKERFILE} --no-cache .
+          docker build -t ${LAMBDA_NAME}:${VERSION}-${ENV_TYPE} -f ${DOCKERFILE} --no-cache .
           echo "build success"
-          echo "${LAMBDA_NAME}:${VERSION}" 
-          echo "${ECR_URI}:${VERSION}"
-          docker tag ${LAMBDA_NAME}:${VERSION} ${ECR_URI}:${VERSION}
+          echo "${LAMBDA_NAME}:${VERSION}-${ENV_TYPE}" 
+          echo "${ECR_URI}:${VERSION}-${ENV_TYPE}"
+          docker tag ${LAMBDA_NAME}:${VERSION}-${ENV_TYPE} ${ECR_URI}:${VERSION}-${ENV_TYPE}
           echo "tag success"
-          docker push ${ECR_URI}:${VERSION}
+          docker push ${ECR_URI}:${VERSION}-${ENV_TYPE}
           echo "push success"
 
       - name: Update Lambda
         run: |
           aws lambda update-function-code \
             --function-name $LAMBDA_NAME \
-            --image-uri $ECR_URI:$VERSION
+            --image-uri $ECR_URI:${VERSION}-${ENV_TYPE}
 
       - name: Wait for Lambda Update
         run: |
