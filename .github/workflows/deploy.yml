@@ -33,8 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Variables에서 직접 Lambda 이름 사용
-        lambda: ${{ github.ref == 'refs/heads/master' && vars.PROD_LAMBDA_NAMES || vars.DEV_LAMBDA_NAME }}
+        lambda: ${{ github.ref == 'refs/heads/master' && fromJSON(vars.PROD_LAMBDA_NAMES) || fromJSON(format('[\"%s\"]', vars.DEV_LAMBDA_NAME)) }}
     steps:
       - uses: actions/checkout@v4
       
