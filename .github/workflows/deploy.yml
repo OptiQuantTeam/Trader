@@ -28,26 +28,27 @@ jobs:
             echo "env_type=dev" >> $GITHUB_OUTPUT
           fi
 
-  deploy:
+  build:
     needs: init-version
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        # master 브랜치면 PROD_LAMBDA_NAMES 사용, 아니면 DEV_LAMBDA_NAME 사용
-        lambda: ${{ github.ref == 'refs/heads/master' && fromJSON(vars.PROD_LAMBDA_NAMES) || fromJSON(vars.DEV_LAMBDA_NAME) }}
+    outputs:
+      tag: ${{ steps.set-var.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
       
       - name: Set Environment Variables
+        id: set-var
         run: |
           echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_URI }}" >> $GITHUB_ENV
-          echo "LAMBDA_NAME=trader-lambda-${{ matrix.lambda }}" >> $GITHUB_ENV
+          echo "IMAGE_NAME=${{ secrets.IMAGE_NAME }}" >> $GITHUB_ENV
           echo "VERSION=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
           echo "ENV_TYPE=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
           if [[ "${{ needs.init-version.outputs.env_type }}" == "prod" ]]; then
             echo "TAG=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
+            echo "tag=${{ needs.init-version.outputs.version }}" >> $GITHUB_OUTPUT
           else
             echo "TAG=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
+            echo "tag=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Configure AWS Credentials
@@ -60,27 +61,17 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Delete all ECR images
+      - name: Delete ECR images
         run: |
           REPO_NAME=$(echo $ECR_URI | cut -d'/' -f2-)
           echo "리포지토리: $REPO_NAME"
           
-          if [[ "${{ needs.init-version.outputs.env_type }}" == "prod" ]]; then
-            # master 브랜치: YYYYMMDD 형식의 태그를 가진 이미지 삭제
-            echo "날짜 형식 태그를 가진 이미지 검색 중..."
-            
-            # 모든 이미지 태그 가져오기
-            IMAGES=$(aws ecr describe-images \
-              --repository-name $REPO_NAME \
-              --output json)
-            
-            # 날짜 형식(8자리 숫자)의 태그를 가진 이미지 다이제스트 추출
+          if [[ "$ENV_TYPE" == "prod" ]]; then
+            IMAGES=$(aws ecr describe-images --repository-name $REPO_NAME --output json)
             IMAGE_DIGESTS=$(echo $IMAGES | jq -r '.imageDetails[] | 
               select(.imageTags != null and (.imageTags[] | test("^[0-9]{8}$"))) | 
               .imageDigest')
           else
-            # develop 브랜치: dev 태그를 가진 이미지 삭제
-            echo "dev 태그를 가진 이미지 검색 중..."
             IMAGE_DIGESTS=$(aws ecr describe-images \
               --repository-name $REPO_NAME \
               --query 'imageDetails[?imageTags[0]==`dev`].[imageDigest]' \
@@ -102,29 +93,42 @@ jobs:
 
       - name: Build and Push Image
         run: |
-          # 환경 변수 사용
-          echo "Building for $ENV_TYPE environment"
-          echo "Version: $VERSION"
-          echo "TAG: $TAG"
-          
-          # Dockerfile 선택
           DOCKERFILE=$([[ "$ENV_TYPE" == "prod" ]] && echo "Dockerfile" || echo "Dockerfile.dev")
-          
-          # 이미지 빌드 및 푸시
-          docker build -t ${LAMBDA_NAME}:${TAG} -f ${DOCKERFILE} --no-cache .
-          echo "build success"
-          echo "${LAMBDA_NAME}:${TAG}" 
-          echo "${ECR_URI}:${TAG}"
-          docker tag ${LAMBDA_NAME}:${TAG} ${ECR_URI}:${TAG}
-          echo "tag success"
+          docker build -t ${IMAGE_NAME}:${TAG} -f ${DOCKERFILE} --no-cache .
+          docker tag ${IMAGE_NAME}:${TAG} ${ECR_URI}:${TAG}
           docker push ${ECR_URI}:${TAG}
-          echo "push success"
+
+
+  deploy:
+    needs: [init-version, build]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        lambda: ${{ github.ref == 'refs/heads/master' && fromJSON(vars.PROD_LAMBDA_NAMES) || fromJSON(vars.DEV_LAMBDA_NAME) }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set Environment Variables
+        id: set-var
+        run: |
+          echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_URI }}" >> $GITHUB_ENV
+          echo "LAMBDA_NAME=trader-lambda-${{ matrix.lambda }}" >> $GITHUB_ENV
+          echo "TAG=${{ needs.build.outputs.tag }}" >> $GITHUB_ENV
 
       - name: Update Lambda
         run: |
+          echo "Updating Lambda function: $LAMBDA_NAME"
+          echo "TAG: $TAG"
+          echo "Using image: $ECR_URI:$TAG"
+          
           aws lambda update-function-code \
-            --function-name $LAMBDA_NAME \
-            --image-uri $ECR_URI:${TAG}
+            --function-name "$LAMBDA_NAME" \
+            --image-uri "$ECR_URI:$TAG"
 
       - name: Wait for Lambda Update
         run: |
@@ -133,6 +137,7 @@ jobs:
 
       - name: Test Lambda
         run: |
+          LAMBDA_NAME="trader-lambda-${{ matrix.lambda }}"
           RESPONSE=$(aws lambda invoke \
             --function-name $LAMBDA_NAME \
             --payload '{"mode": "test","statusCode":200,"info":{"symbol": "BTCUSDT","side": "BUY","positionSide": "LONG","trade": "futures"}}' \
@@ -143,7 +148,7 @@ jobs:
           FUNCTION_ERROR=$(echo $RESPONSE | jq -r '.FunctionError // empty')
           
           if [ "$STATUS_CODE" != "200" ] || [ ! -z "$FUNCTION_ERROR" ]; then
-            echo "::error::Lambda 테스트 실패 ($ENV_TYPE)"
+            echo "::error::Lambda 테스트 실패"
             echo $RESPONSE
             exit 1
           fi
@@ -158,10 +163,8 @@ jobs:
           VERSION: ${{ needs.init-version.outputs.version }}
           ENV_TYPE: ${{ needs.init-version.outputs.env_type }}
         run: |
-          # 환경 표시 텍스트
           ENV_TEXT=$([[ "$ENV_TYPE" == "prod" ]] && echo "프로덕션" || echo "개발")
           
-          # 결과 상태
           if [ "${{ needs.deploy.result }}" = "success" ]; then
             COLOR="good"
             STATUS="성공"
