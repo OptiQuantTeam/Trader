@@ -44,9 +44,11 @@ jobs:
           echo "VERSION=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
           echo "ENV_TYPE=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
           if [[ "${{ needs.init-version.outputs.env_type }}" == "prod" ]]; then
-            echo "tag=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
+            echo "TAG=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
+            echo "tag=${{ needs.init-version.outputs.version }}" >> $GITHUB_OUTPUT
           else
-            echo "tag=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
+            echo "TAG=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
+            echo "tag=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Configure AWS Credentials
@@ -92,9 +94,9 @@ jobs:
       - name: Build and Push Image
         run: |
           DOCKERFILE=$([[ "$ENV_TYPE" == "prod" ]] && echo "Dockerfile" || echo "Dockerfile.dev")
-          docker build -t ${IMAGE_NAME}:${tag} -f ${DOCKERFILE} --no-cache .
-          docker tag ${IMAGE_NAME}:${tag} ${ECR_URI}:${tag}
-          docker push ${ECR_URI}:${tag}
+          docker build -t ${IMAGE_NAME}:${TAG} -f ${DOCKERFILE} --no-cache .
+          docker tag ${IMAGE_NAME}:${TAG} ${ECR_URI}:${TAG}
+          docker push ${ECR_URI}:${TAG}
 
 
   deploy:
