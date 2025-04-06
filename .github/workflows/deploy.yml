@@ -117,9 +117,14 @@ jobs:
       - name: Update Lambda
         run: |
           LAMBDA_NAME="trader-lambda-${{ matrix.lambda }}"
+          IMAGE_URI="${{ needs.build.outputs.image_uri }}"
+          
+          echo "Updating Lambda function: $LAMBDA_NAME"
+          echo "Using image: $IMAGE_URI"
+          
           aws lambda update-function-code \
-            --function-name $LAMBDA_NAME \
-            --image-uri ${{ needs.build.outputs.image_uri }}
+            --function-name "$LAMBDA_NAME" \
+            --image-uri "$IMAGE_URI"
 
       - name: Wait for Lambda Update
         run: |
