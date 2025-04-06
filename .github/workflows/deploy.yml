@@ -99,6 +99,7 @@ jobs:
           # 환경 변수 사용
           echo "Building for $ENV_TYPE environment"
           echo "Version: $VERSION"
+          echo "TAG: $TAG"
           
           # Dockerfile 선택
           DOCKERFILE=$([[ "$ENV_TYPE" == "prod" ]] && echo "Dockerfile" || echo "Dockerfile.dev")
