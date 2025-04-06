@@ -68,10 +68,16 @@ jobs:
           if [[ "${{ needs.init-version.outputs.env_type }}" == "prod" ]]; then
             # master 브랜치: YYYYMMDD 형식의 태그를 가진 이미지 삭제
             echo "날짜 형식 태그를 가진 이미지 검색 중..."
-            IMAGE_DIGESTS=$(aws ecr describe-images \
+            
+            # 모든 이미지 태그 가져오기
+            IMAGES=$(aws ecr describe-images \
               --repository-name $REPO_NAME \
-              --query 'imageDetails[?contains(imageTags[0], `2`) && length(imageTags[0])==8].[imageDigest]' \
-              --output text)
+              --output json)
+            
+            # 날짜 형식(8자리 숫자)의 태그를 가진 이미지 다이제스트 추출
+            IMAGE_DIGESTS=$(echo $IMAGES | jq -r '.imageDetails[] | 
+              select(.imageTags != null and (.imageTags[] | test("^[0-9]{8}$"))) | 
+              .imageDigest')
           else
             # develop 브랜치: dev 태그를 가진 이미지 삭제
             echo "dev 태그를 가진 이미지 검색 중..."
