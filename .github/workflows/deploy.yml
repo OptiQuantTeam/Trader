@@ -45,7 +45,7 @@ jobs:
           else
             echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_DEV_URI }}" >> $GITHUB_ENV
           fi
-          echo "LAMBDA_NAME=${{ matrix.lambda }}" >> $GITHUB_ENV
+          echo "LAMBDA_NAME=trader-lambda-${{ matrix.lambda }}" >> $GITHUB_ENV
           echo "VERSION=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
           echo "ENV_TYPE=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
 
@@ -64,21 +64,25 @@ jobs:
           REPO_NAME=$(echo $ECR_URI | cut -d'/' -f2-)
           echo "리포지토리: $REPO_NAME"
           
-          # 모든 이미지 다이제스트 가져오기
+          # 환경에 따른 태그 필터 설정
+          TAG_FILTER=$([[ "${{ needs.init-version.outputs.env_type }}" == "prod" ]] && echo "prod" || echo "dev")
+          echo "삭제할 이미지 태그 필터: $TAG_FILTER"
+          
+          # 태그에 prod 또는 dev가 포함된 이미지만 필터링하여 가져오기
           IMAGE_DIGESTS=$(aws ecr describe-images \
             --repository-name $REPO_NAME \
-            --query 'imageDetails[*].[imageDigest]' \
+            --query "imageDetails[?contains(imageTags[0], '${TAG_FILTER}')].[imageDigest]" \
             --output text)
           
           if [ ! -z "$IMAGE_DIGESTS" ]; then
-            echo "모든 이미지 삭제 중..."
+            echo "${TAG_FILTER} 태그를 포함한 이미지 삭제 중..."
             for digest in $IMAGE_DIGESTS; do
               aws ecr batch-delete-image \
                 --repository-name $REPO_NAME \
                 --image-ids imageDigest=$digest
               echo "이미지 삭제 완료: $digest"
             done
-            echo "모든 이미지 삭제가 완료되었습니다."
+            echo "선택된 이미지 삭제가 완료되었습니다."
           else
             echo "삭제할 이미지가 없습니다."
           fi
