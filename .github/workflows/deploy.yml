@@ -33,7 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        lambda: ${{ github.ref == 'refs/heads/master' && fromJSON(vars.PROD_LAMBDA_NAMES) || fromJSON('["' + vars.DEV_LAMBDA_NAME + '"]') }}
+        # master 브랜치면 PROD_LAMBDA_NAMES 사용, 아니면 DEV_LAMBDA_NAME 사용
+        lambda: ${{ github.ref == 'refs/heads/master' && fromJSON(vars.PROD_LAMBDA_NAMES) || fromJSON(vars.DEV_LAMBDA_NAME) }}
     steps:
       - uses: actions/checkout@v4
       
