@@ -45,9 +45,9 @@ jobs:
           echo "VERSION=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
           echo "ENV_TYPE=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
           if [[ "${{ needs.init-version.outputs.env_type }}" == "prod" ]]; then
-            echo "TAG=${VERSION}" >> $GITHUB_ENV
+            echo "TAG=${{ needs.init-version.outputs.version }}" >> $GITHUB_ENV
           else
-            echo "TAG=${ENV_TYPE}" >> $GITHUB_ENV
+            echo "TAG=${{ needs.init-version.outputs.env_type }}" >> $GITHUB_ENV
           fi
 
       - name: Configure AWS Credentials
