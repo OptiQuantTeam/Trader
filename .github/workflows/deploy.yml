@@ -33,8 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # master 브랜치면 PROD_LAMBDA_NAMES 사용, 아니면 DEV_LAMBDA_NAME을 배열로 변환
-        lambda: ${{ github.ref == 'refs/heads/master' && fromJSON(vars.PROD_LAMBDA_NAMES) || [vars.DEV_LAMBDA_NAME] }}
+        lambda: ${{ github.ref == 'refs/heads/master' && fromJSON(vars.PROD_LAMBDA_NAMES) || fromJSON('["' + vars.DEV_LAMBDA_NAME + '"]') }}
     steps:
       - uses: actions/checkout@v4
       
