@@ -32,11 +32,12 @@ jobs:
     needs: init-version
     runs-on: ubuntu-latest
     outputs:
-      image_uri: ${{ steps.set-image-uri.outputs.uri }}
+      tag: ${{ steps.set-var.outputs.TAG }}
     steps:
       - uses: actions/checkout@v4
       
       - name: Set Environment Variables
+        id: set-var
         run: |
           echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_URI }}" >> $GITHUB_ENV
           echo "IMAGE_NAME=${{ secrets.IMAGE_NAME }}" >> $GITHUB_ENV
@@ -95,10 +96,6 @@ jobs:
           docker tag ${IMAGE_NAME}:${TAG} ${ECR_URI}:${TAG}
           docker push ${ECR_URI}:${TAG}
 
-      - name: Set image URI
-        id: set-image-uri
-        run: |
-          echo "uri=${ECR_URI}:${TAG}" >> $GITHUB_OUTPUT
 
   deploy:
     needs: [init-version, build]
@@ -114,17 +111,22 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Set Environment Variables
+        id: set-var
+        run: |
+          echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_URI }}" >> $GITHUB_ENV
+
       - name: Update Lambda
         run: |
           LAMBDA_NAME="trader-lambda-${{ matrix.lambda }}"
-          IMAGE_URI="${{ needs.build.outputs.image_uri }}"
+          TAG="${{ needs.build.outputs.tag }}"
           
           echo "Updating Lambda function: $LAMBDA_NAME"
-          echo "Using image: $IMAGE_URI"
+          echo "Using image: $ECR_URI:$TAG"
           
           aws lambda update-function-code \
             --function-name "$LAMBDA_NAME" \
-            --image-uri "$IMAGE_URI"
+            --image-uri "$ECR_URI:$TAG"
 
       - name: Wait for Lambda Update
         run: |
