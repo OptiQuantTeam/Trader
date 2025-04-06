@@ -115,13 +115,13 @@ jobs:
         id: set-var
         run: |
           echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_URI }}" >> $GITHUB_ENV
+          echo "LAMBDA_NAME=trader-lambda-${{ matrix.lambda }}" >> $GITHUB_ENV
+          echo "TAG=${{ needs.build.outputs.tag }}" >> $GITHUB_ENV
 
       - name: Update Lambda
         run: |
-          LAMBDA_NAME="trader-lambda-${{ matrix.lambda }}"
-          TAG="${{ needs.build.outputs.tag }}"
-          
           echo "Updating Lambda function: $LAMBDA_NAME"
+          echo "TAG: $TAG"
           echo "Using image: $ECR_URI:$TAG"
           
           aws lambda update-function-code \
