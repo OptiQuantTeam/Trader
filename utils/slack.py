@@ -85,6 +85,133 @@ class SlackBot():
             'body': 'send message success'
         }
 
+    def send_close_position(self, event, resp):
+        if self.user_id == None:
+            tag = ''
+        else:
+            tag = f'<@{self.user_id}>'
+
+        # 포지션에 따른 색상과 이모지 설정
+        if resp['side'] == 'BUY':
+            color = "#36a64f"  # 초록색
+            position_emoji = "🔵"
+            action = "SHORT 포지션 정리"
+        else:
+            color = "#ff4444"  # 빨간색
+            position_emoji = "🔴"
+            action = "LONG 포지션 정리"
+
+        # 수익률 계산 (누적 체결 금액 / 수량)
+        try:
+            avg_price = float(resp['avgPrice'])
+            executed_amt = float(resp['executedQty'])
+            cum_quote = float(resp['cumQuote'])
+            if executed_amt > 0:
+                pnl = f"{(cum_quote / executed_amt):.2f} USDT"
+            else:
+                pnl = "0 USDT"
+        except:
+            pnl = "계산 불가"
+
+        # 메시지 블록 구성
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*포지션 정리 알림* {position_emoji}"
+                }
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*거래쌍:*\n{resp['symbol']}"
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*포지션 정리:*\n{action}"
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*주문유형:*\n{resp['type']}"
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*정리수량:*\n{resp['origQty']}"
+                    }
+                ]
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {
+                    "type": "mrkdwn",
+                    "text": f"*주문수량:*\n{resp['origQty']}"
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*체결수량:*\n{resp['executedQty']}"
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*평균체결가:*\n{resp['avgPrice']}"
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*체결금액:*\n{pnl}"
+                    }
+                ]
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*상태:*\n{resp['status']}"
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*감소전용:*\n{'예' if resp['reduceOnly'] else '아니오'}"
+                    }
+                ]
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"주문시각: {datetime.datetime.fromtimestamp(resp['time']/1000).strftime('%Y-%m-%d %H:%M:%S')} | " + \
+                            f"갱신시각: {datetime.datetime.fromtimestamp(resp['updateTime']/1000).strftime('%Y-%m-%d %H:%M:%S')}"
+                    }
+                ]
+            }
+        ]
+
+        # 기본 텍스트 메시지
+        summary_text = f"{tag} {position_emoji} {resp['symbol']} {action} 완료 (수량: {resp['origQty']})"
+
+        response = self.client.chat_postMessage(
+            channel=self.channel,
+            text=summary_text,
+            attachments=[
+                {
+                    "color": color,
+                    "blocks": blocks,
+                    "fallback": summary_text
+                }
+            ]
+        )
+        
+        return {
+            'statusCode': 200,
+            'body': 'send position message success'
+        }
+    
     def send_error(self, error):
         if self.user_id == None:
             tag = ''
