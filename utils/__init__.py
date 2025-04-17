@@ -1,4 +1,5 @@
 from .aws import get_configure
+from .aws import set_leverage
 
 from .binance import futures_market_params
 from .binance import futures_limit_params
