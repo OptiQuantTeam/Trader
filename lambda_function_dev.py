@@ -57,14 +57,6 @@ def lambda_handler(event, context):
         if info['type'] != 'MARKET':
             raise Exception(f"Invalid Type : {info['type']}")
 
-        
-
-
-        '''
-            최근 2개의 수입 내역 확인
-            손해일 경우: 레베리지 감소
-            이익일 경우: 레베리지 증가
-        '''
 
         # 최근 3개의 수입 내역 확인
         income = utils.get_income(client, info['symbol'])
@@ -82,7 +74,7 @@ def lambda_handler(event, context):
         server_timestamp = server_time['serverTime']
 
         # 매매 파라미터 생성
-        params = utils.futures_market_params(info=info, config=config, asset=usdt)
+        params = utils.futures_market_params(client=client, info=info, config=config, asset=usdt, leverage=leverage)
         
         # 시장가 매매 주문
         order = client.futures_create_test_order(
@@ -95,7 +87,7 @@ def lambda_handler(event, context):
             timestamp=server_timestamp)
         
         # 스탑로스 주문
-        stop_price = utils.calculate_stop_loss_price(entry_price=params['price'], position_side=params['side'], leverage=leverage, base_sl=0.001)
+        stop_price = utils.calculate_stop_loss_price(entry_price=params['price'], position_side=params['side'], leverage=leverage)
         stop_order = client.futures_create_test_order(
             symbol=params['symbol'],
             side=params['side'],
