@@ -19,13 +19,13 @@ load_dotenv()
 AWS_USER_ID = os.getenv('AWS_USER_ID')          #.env파일에서 AWS Lambda 환경변수로 변경할 예정
 
 '''
-*** event ***                   *** config ***
+*** event.info ***                   *** config ***
     price                           user_id
     symbol                          ratio
     side                            leverage
     positionSide                    type
     trade                           sl
-    opCode                          tp
+                                    tp
                                     api_key
                                     secret_key
                                     slack_token
