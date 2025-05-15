@@ -57,8 +57,8 @@ def lambda_handler(event, context):
             raise Exception(f"Invalid Trade : {info['trade']}")
         
         # 매매 타입 확인
-        if info.get('type', None) != 'MARKET':
-            raise Exception(f"Invalid Type : {info['type']}. Only MARKET type is currently supported by this logic flow.")
+        if config.get('type', None) != 'MARKET':
+            raise Exception(f"Invalid Type : {config['type']}. Only MARKET type is currently supported by this logic flow.")
 
 
 
