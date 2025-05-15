@@ -53,12 +53,13 @@ def lambda_handler(event, context):
             info['price'] = float(price_ticker['price'])
 
         # 거래 타입 확인
-        if info['trade'] != 'futures':
+        if info.get('trade', None) != 'futures':
             raise Exception(f"Invalid Trade : {info['trade']}")
         
         # 매매 타입 확인
-        if info['type'] != 'MARKET':
-            raise Exception(f"Invalid Type : {info['type']}. Only MARKET type is currently supported by this logic flow.")
+        if config.get('type', None) != 'MARKET':
+            raise Exception(f"Invalid Type : {config['type']}. Only MARKET type is currently supported by this logic flow.")
+
 
 
         # 최근 3개의 수입 내역 확인
