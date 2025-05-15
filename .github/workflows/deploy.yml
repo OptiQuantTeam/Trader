@@ -117,7 +117,7 @@ jobs:
         id: set-var
         run: |
           echo "ECR_URI=${{ secrets.AWS_ECR_TRADER_URI }}" >> $GITHUB_ENV
-          echo "LAMBDA_NAME=trader-lambda-${{ matrix.lambda }}" >> $GITHUB_ENV
+          echo "LAMBDA_NAME=${{ secrets.AWS_LAMBDA_TRADER_NAME }}-${{ matrix.lambda }}" >> $GITHUB_ENV
           echo "TAG=${{ needs.build.outputs.tag }}" >> $GITHUB_ENV
 
       - name: Update Lambda
@@ -136,8 +136,8 @@ jobs:
           sleep 30
 
       - name: Test Lambda
+        if: github.ref != 'refs/heads/master'
         run: |
-          LAMBDA_NAME="trader-lambda-${{ matrix.lambda }}"
           RESPONSE=$(aws lambda invoke \
             --function-name $LAMBDA_NAME \
             --payload '{"mode": "test","statusCode":200,"info":{"symbol": "BTCUSDT","side": "BUY","positionSide": "LONG","trade": "futures"}}' \

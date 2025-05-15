@@ -45,3 +45,27 @@ def get_configure(AWS_USER_ID, AWS_ACCESS_KEY=None, AWS_SECRET_KEY=None):
     #print(json.dumps(response['Item'], indent=4))
     return item
     #return json.dumps(response['Item'], indent=4)
+
+
+
+def set_leverage(AWS_USER_ID, leverage, AWS_ACCESS_KEY=None, AWS_SECRET_KEY=None):
+    if AWS_ACCESS_KEY == None and AWS_SECRET_KEY == None:
+        dynamodb = boto3.resource('dynamodb')
+    else:    
+        dynamodb = boto3.resource('dynamodb',
+                        region_name='ap-northeast-2',
+                        aws_access_key_id=AWS_ACCESS_KEY,
+                        aws_secret_access_key=AWS_SECRET_KEY)
+
+    table = dynamodb.Table('User')
+
+    response = table.update_item(
+        Key={
+            'user_id': AWS_USER_ID
+        },
+        UpdateExpression='set leverage = :leverage',
+        ExpressionAttributeValues={
+            ':leverage': leverage
+        }
+    )
+    return response
