@@ -6,7 +6,7 @@ from binance.client import Client
 from binance.enums import *
 import time
 import utils
-from utils import SlackBot
+from utils import SlackBot, get_symbol_info
 
 
 '''
@@ -41,13 +41,16 @@ def lambda_handler(event, context):
         info = event['info']
 
     except Exception as e:
-        response = {'statusCode': 401, 'body': e}
+        response = {'statusCode': 401, 'body': str(e)}
         return response
     
+    order = None
+    stop_order = None
+
     try:
         if event.get('mode', None) == 'test':
-            price = client.futures_symbol_ticker(symbol=info['symbol'])['price']
-            info['price'] = float(price)
+            price_ticker = client.futures_symbol_ticker(symbol=info['symbol'])
+            info['price'] = float(price_ticker['price'])
 
         # 거래 타입 확인
         if info['trade'] != 'futures':
@@ -55,7 +58,7 @@ def lambda_handler(event, context):
         
         # 매매 타입 확인
         if info['type'] != 'MARKET':
-            raise Exception(f"Invalid Type : {info['type']}")
+            raise Exception(f"Invalid Type : {info['type']}. Only MARKET type is currently supported by this logic flow.")
 
 
         # 최근 3개의 수입 내역 확인
@@ -76,38 +79,64 @@ def lambda_handler(event, context):
         # 매매 파라미터 생성
         params = utils.futures_market_params(client=client, info=info, config=config, asset=usdt, leverage=leverage)
         
-        # 시장가 매매 주문
-        order = client.futures_create_test_order(
+        trade_action_result = utils.process_trade_logic(
+            client=client,
             symbol=params['symbol'],
-            side=params['side'],
-            type=params['type'],
-            quantity=1,     # 테스트용 수량
-            #quantity=params['quantity'],
-            newOrderRespType='FULL',
-            timestamp=server_timestamp)
-        
-        # 스탑로스 주문
-        stop_price = utils.calculate_stop_loss_price(entry_price=params['price'], position_side=params['side'], leverage=leverage)
-        stop_order = client.futures_create_test_order(
-            symbol=params['symbol'],
-            side=params['side'],
-            type='STOP_MARKET',
-            stopPrice=stop_price,
-            closePosition=True,
-            newOrderRespType='FULL',
-            timestamp=server_timestamp)
-        
-        # 주문 결과 전송
-        slackBot.send_message(info, order) 
-        slackBot.send_message(info, stop_order)
+            order_side=params['side'],
+            order_quantity=params['quantity'],
+            order_type=params['type']
+        )
+
+        if trade_action_result:
+            order = trade_action_result
+            
+            is_new_position_opened = not order.get('reduceOnly', False) and order.get('side') == params['side']
+
+            if is_new_position_opened:
+                actual_entry_price = info['price']
+                if order.get('fills') and len(order['fills']) > 0:
+                    total_price_sum = sum(float(f['price']) * float(f['qty']) for f in order['fills'])
+                    total_qty_sum = sum(float(f['qty']) for f in order['fills'])
+                    if total_qty_sum > 0:
+                        actual_entry_price = total_price_sum / total_qty_sum
+                
+                stop_price_calculated = utils.calculate_stop_loss_price(
+                    entry_price=actual_entry_price,
+                    position_side=order['side'],
+                    leverage=leverage
+                )
+                
+                symbol_details = get_symbol_info(client, params['symbol'])
+                price_precision = symbol_details['pricePrecision'] if symbol_details else 2
+                stop_price_rounded = round(stop_price_calculated, price_precision)
+
+                stop_loss_order_side = Client.SIDE_SELL if order['side'] == Client.SIDE_BUY else Client.SIDE_BUY
+
+                stop_order = client.futures_create_test_order(
+                    symbol=params['symbol'],
+                    side=stop_loss_order_side,
+                    type='STOP_MARKET',
+                    stopPrice=stop_price_rounded,
+                    closePosition=True,
+                    newOrderRespType='FULL',
+                    timestamp=server_timestamp
+                )
+            elif order.get('reduceOnly'):
+                pass
+        else:
+            pass
+
+        if order:
+            slackBot.send_message(info, order)
+        if stop_order:
+            slackBot.send_message(info, stop_order)
 
         # 레버리지 변경 저장
         utils.set_leverage(AWS_USER_ID, leverage)
-
         response = {'statusCode': 200, 'body': 'success'}
     except Exception as e:
-        slackBot.send_error(e)
-        response = {'statusCode': 400, 'body': e}
+        slackBot.send_error(str(e))
+        response = {'statusCode': 400, 'body': str(e)}
     finally:
         return response
 
