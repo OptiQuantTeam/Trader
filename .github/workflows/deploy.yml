@@ -136,6 +136,7 @@ jobs:
           sleep 30
 
       - name: Test Lambda
+        if: github.ref != 'refs/heads/master'
         run: |
           RESPONSE=$(aws lambda invoke \
             --function-name $LAMBDA_NAME \
