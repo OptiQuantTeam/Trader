@@ -113,7 +113,7 @@ def get_income(client, symbol):
         print(e)
 
 def adjust_leverage(income, current_leverage):
-    if len(income) < 2:
+    if len(income) <= 2:
         return current_leverage
     max_leverage = 4
     min_leverage = 1
@@ -295,6 +295,93 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
             except Exception as e:
                 return None
 
+def process_test_trade_logic(client, symbol: str, order_side: str, order_quantity: float, order_type: str, order_price: float = None, time_in_force: str = None):
+    """
+    Processes a futures trade based on the current position and new order details.
+    - If no position exists for the symbol, places the new order.
+    - If a position exists and the new order is in the same direction, does nothing.
+    - If a position exists and the new order is in the opposite direction, closes the entire existing position with a market order.
+    
+    Args:
+        client: Binance API client instance.
+        symbol (str): The trading symbol (e.g., 'BTCUSDT').
+        order_side (str): The side of the order ('BUY' or 'SELL').
+        order_quantity (float): The quantity for the new order.
+        order_type (str): The type of the order (e.g., 'MARKET', 'LIMIT').
+        order_price (float, optional): The price for LIMIT orders. Defaults to None.
+        time_in_force (str, optional): Time in force for LIMIT orders (e.g., 'GTC'). Defaults to None.
+
+    Returns:
+        dict or None: The order response from Binance if an order is placed, otherwise None.
+    """
+    
+    # Use the existing get_position function to get the signed position amount
+    # get_position returns the float amount or None if no position
+    raw_pos_amt = get_position(client, symbol)
+    current_pos_amt = float(raw_pos_amt) if raw_pos_amt is not None else 0.0
+
+    current_pos_direction = None
+    if current_pos_amt > 0:
+        current_pos_direction = Client.SIDE_BUY  # Indicates a LONG position
+    elif current_pos_amt < 0:
+        current_pos_direction = Client.SIDE_SELL  # Indicates a SHORT position
+
+    # Case 1: No position currently held for the symbol
+    if current_pos_direction is None:
+        try:
+            params = {
+                'symbol': symbol,
+                'side': order_side,
+                'type': order_type,
+                'quantity': order_quantity,
+            }
+            if order_type == Client.ORDER_TYPE_LIMIT:
+                if order_price is None:
+                    return None
+                params['price'] = order_price
+                if time_in_force: # Common for LIMIT orders
+                    params['timeInForce'] = time_in_force
+            
+            # 여기에 수량 및 가격 정밀도 조정 로직을 추가할 수 있습니다.
+            # 예: adjusted_params = adjust_order_params(client, symbol, quantity=order_quantity, price=order_price if order_type == Client.ORDER_TYPE_LIMIT else None)
+            # params['quantity'] = adjusted_params['quantity']
+            # if 'price' in adjusted_params:
+            #     params['price'] = adjusted_params['price']
+
+            new_order = client.futures_create_test_order(**params)
+            return new_order
+        except BinanceAPIException as e:
+            return None
+        except Exception as e:
+            return None
+
+    # Case 2: A position currently exists for the symbol
+    else:
+        # Subcase 2.1: New order is in the same direction as the current position
+        if order_side == current_pos_direction:
+            return None
+        
+        # Subcase 2.2: New order is in the opposite direction – close the existing position
+        else:
+            
+            close_order_side = Client.SIDE_SELL if current_pos_direction == Client.SIDE_BUY else Client.SIDE_BUY
+            # Quantity for closing is the absolute amount of the current position
+            close_quantity = abs(current_pos_amt) 
+
+            try:
+                closing_order = client.futures_create_test_order(
+                    symbol=symbol,
+                    side=close_order_side,
+                    type=Client.ORDER_TYPE_MARKET,  # Typically close positions with a market order for certainty
+                    quantity=close_quantity,
+                    reduceOnly=True  # Ensures this order only reduces or closes the position
+                )
+                return closing_order
+            except BinanceAPIException as e:
+                return None
+            except Exception as e:
+                return None
+            
 def get_symbol_info(client, symbol: str) -> dict:
     """
     거래쌍의 상세 정보를 가져옵니다.
