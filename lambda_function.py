@@ -75,8 +75,7 @@ def lambda_handler(event, context):
         income = utils.get_income(client, params['symbol'])
 
         # 레버리지 조정
-        current_leverage = utils.adjust_leverage(income, params['leverage'])
-        leverage = utils.get_leverage_settings(current_leverage)['leverage']
+        leverage = utils.adjust_leverage(income, params['leverage'])
 
         trade_action_result = utils.process_trade_logic(
             client=client,
