@@ -60,15 +60,7 @@ def lambda_handler(event, context):
         if config.get('type', None) != 'MARKET':
             raise Exception(f"Invalid Type : {config['type']}. Only MARKET type is currently supported by this logic flow.")
 
-
-
-        # 최근 3개의 수입 내역 확인
-        income = utils.get_income(client, info['symbol'])
         
-        # 레버리지 조정
-        leverage = utils.adjust_leverage(income, int(config['leverage']))
-        client.futures_change_leverage(leverage=leverage, symbol=info['symbol'])
-
         # 잔고 조회
         balance = client.futures_account_balance()
         usdt = float([asset['balance'] for asset in balance if asset['asset'] == 'USDT'][0])
@@ -78,14 +70,21 @@ def lambda_handler(event, context):
         server_timestamp = server_time['serverTime']
 
         # 매매 파라미터 생성
-        params = utils.futures_market_params(client=client, info=info, config=config, asset=usdt, leverage=leverage)
-        
+        params = utils.futures_market_params(client=client, info=info, config=config, asset=usdt)
+
+        # 최근 3개의 수입 내역 확인
+        income = utils.get_income(client, params['symbol'])
+
+        # 레버리지 조정
+        leverage = utils.adjust_leverage(income, params['leverage'])
+
         trade_action_result = utils.process_test_trade_logic(
             client=client,
             symbol=params['symbol'],
             order_side=params['side'],
             order_quantity=params['quantity'],
-            order_type=params['type']
+            order_type=params['type'],
+            leverage=leverage
         )
 
         if trade_action_result:
