@@ -229,6 +229,10 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
         dict or None: The order response from Binance if an order is placed, otherwise None.
     """
     
+    # HOLD 신호가 오면 아무것도 하지 않음
+    if order_side == 'HOLD':
+        return None
+    
     # Use the existing get_position function to get the signed position amount
     # get_position returns the float amount or None if no position
     raw_pos_amt = get_position(client, symbol)
@@ -279,7 +283,6 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
             close_quantity = abs(current_pos_amt) 
 
             try:
-                
                 closing_order = client.futures_create_order(
                     symbol=symbol,
                     side=close_order_side,
