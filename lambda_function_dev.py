@@ -80,7 +80,7 @@ def lambda_handler(event, context):
         # 매매 파라미터 생성
         params = utils.futures_market_params(client=client, info=info, config=config, asset=usdt, leverage=leverage)
         
-        trade_action_result = utils.process_trade_logic(
+        trade_action_result = utils.process_test_trade_logic(
             client=client,
             symbol=params['symbol'],
             order_side=params['side'],
