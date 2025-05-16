@@ -75,7 +75,8 @@ def lambda_handler(event, context):
         income = utils.get_income(client, params['symbol'])
 
         # 레버리지 조정
-        leverage = utils.adjust_leverage(income, params['leverage'])
+        current_leverage = utils.adjust_leverage(income, params['leverage'])
+        leverage = utils.get_leverage_settings(current_leverage)['leverage']
 
         trade_action_result = utils.process_trade_logic(
             client=client,
@@ -89,11 +90,11 @@ def lambda_handler(event, context):
         if trade_action_result:
             order = trade_action_result
             
-            is_new_position_opened = not order.get('reduceOnly', False) and order.get('side') == params['side']
-
-            if is_new_position_opened:
-                
-                
+            # 포지션 정리인 경우
+            if order.get('reduceOnly', False):
+                slackBot.send_close_position(info, order)
+            # 새로운 포지션을 여는 경우
+            elif order.get('side') == params['side']:
                 actual_entry_price = info['price']
                 if order.get('fills') and len(order['fills']) > 0:
                     total_price_sum = sum(float(f['price']) * float(f['qty']) for f in order['fills'])
@@ -122,18 +123,15 @@ def lambda_handler(event, context):
                     newOrderRespType='FULL',
                     timestamp=server_timestamp
                 )
-            elif order.get('reduceOnly'):
-                pass
+                slackBot.send_message(info, order)
+                if stop_order:
+                    slackBot.send_message(info, stop_order)
+                # 레버리지 변경 저장
+                utils.set_leverage(AWS_USER_ID, leverage)
         else:
             pass
 
-        if order:
-            slackBot.send_message(info, order)
-        if stop_order:
-            slackBot.send_message(info, stop_order)
-
-        # 레버리지 변경 저장
-        utils.set_leverage(AWS_USER_ID, leverage)
+        
         response = {'statusCode': 200, 'body': 'success'}
     except Exception as e:
         slackBot.send_error(str(e))
