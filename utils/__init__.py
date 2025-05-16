@@ -12,6 +12,7 @@ from .binance import _calculate_position_size
 from .binance import calculate_stop_loss_price
 from .binance import get_leverage_settings
 from .binance import process_trade_logic
+from .binance import process_test_trade_logic
 from .binance import get_symbol_info
 
 from .slack import SlackBot
