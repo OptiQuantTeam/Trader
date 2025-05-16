@@ -224,6 +224,7 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
         order_type (str): The type of the order (e.g., 'MARKET', 'LIMIT').
         order_price (float, optional): The price for LIMIT orders. Defaults to None.
         time_in_force (str, optional): Time in force for LIMIT orders (e.g., 'GTC'). Defaults to None.
+        leverage (int, optional): 레버리지 배수. Defaults to 2.
 
     Returns:
         dict or None: The order response from Binance if an order is placed, otherwise None.
@@ -255,13 +256,6 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
                 params['price'] = order_price
                 if time_in_force: # Common for LIMIT orders
                     params['timeInForce'] = time_in_force
-            
-            # 여기에 수량 및 가격 정밀도 조정 로직을 추가할 수 있습니다.
-            # 예: adjusted_params = adjust_order_params(client, symbol, quantity=order_quantity, price=order_price if order_type == Client.ORDER_TYPE_LIMIT else None)
-            # params['quantity'] = adjusted_params['quantity']
-            # if 'price' in adjusted_params:
-            #     params['price'] = adjusted_params['price']
-
 
             # 새로운 포지션이 열릴 때만 레버리지 변경
             client.futures_change_leverage(leverage=leverage, symbol=symbol)
@@ -281,12 +275,14 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
         
         # Subcase 2.2: New order is in the opposite direction – close the existing position
         else:
-            
             close_order_side = Client.SIDE_SELL if current_pos_direction == Client.SIDE_BUY else Client.SIDE_BUY
             # Quantity for closing is the absolute amount of the current position
             close_quantity = abs(current_pos_amt) 
 
             try:
+                # 포지션 정리 전에 해당 심볼의 모든 예약 주문 취소
+                client.futures_cancel_all_open_orders(symbol=symbol)
+
                 closing_order = client.futures_create_order(
                     symbol=symbol,
                     side=close_order_side,
