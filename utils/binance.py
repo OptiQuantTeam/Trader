@@ -2,13 +2,13 @@ from datetime import datetime, timedelta
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
 
-def futures_market_params(client, info, config, asset, leverage):
-    quantity = _calculate_position_size(client, info['symbol'], info, asset, leverage)
+def futures_market_params(client, info, config, asset):
+    quantity = _calculate_position_size(client, info['symbol'], info, asset, int(config['leverage']))
     sl = float(config['sl']) if info['positionSide'] == 'LONG' else -float(config['sl'])
     tp = float(config['tp']) if info['positionSide'] == 'LONG' else -float(config['tp'])
     
-    slprice = info['price']*(1-sl/(float(config['leverage'])*100))
-    tpprice = info['price']*(1+tp/(float(config['leverage'])*100))
+    slprice = info['price']*(1-sl/(int(config['leverage'])*100))
+    tpprice = info['price']*(1+tp/(int(config['leverage'])*100))
 
     return {
             'symbol': info['symbol'],
@@ -17,7 +17,8 @@ def futures_market_params(client, info, config, asset, leverage):
             'type' : config['type'],
             'sl' : slprice,
             'tp' : tpprice,
-            'quantity' : quantity
+            'quantity' : quantity,
+            'leverage' : int(config['leverage'])
             }
 
 def futures_limit_params(info, config, asset):
@@ -208,7 +209,7 @@ def calculate_stop_loss_price(entry_price: float, position_side: str, leverage: 
     else:  # SHORT
         return round(entry_price * (1 + stop_loss_ratio), 2)
 
-def process_trade_logic(client, symbol: str, order_side: str, order_quantity: float, order_type: str, order_price: float = None, time_in_force: str = None):
+def process_trade_logic(client, symbol: str, order_side: str, order_quantity: float, order_type: str, order_price: float = None, time_in_force: str = None, leverage: int = 2):
     """
     Processes a futures trade based on the current position and new order details.
     - If no position exists for the symbol, places the new order.
@@ -260,6 +261,10 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
             # params['quantity'] = adjusted_params['quantity']
             # if 'price' in adjusted_params:
             #     params['price'] = adjusted_params['price']
+
+
+            # 새로운 포지션이 열릴 때만 레버리지 변경
+            client.futures_change_leverage(leverage=leverage, symbol=symbol)
 
             new_order = client.futures_create_order(**params)
             return new_order
@@ -295,7 +300,7 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
             except Exception as e:
                 return None
 
-def process_test_trade_logic(client, symbol: str, order_side: str, order_quantity: float, order_type: str, order_price: float = None, time_in_force: str = None):
+def process_test_trade_logic(client, symbol: str, order_side: str, order_quantity: float, order_type: str, order_price: float = None, time_in_force: str = None, leverage: int = 2):
     """
     Processes a futures trade based on the current position and new order details.
     - If no position exists for the symbol, places the new order.
@@ -348,6 +353,9 @@ def process_test_trade_logic(client, symbol: str, order_side: str, order_quantit
             # if 'price' in adjusted_params:
             #     params['price'] = adjusted_params['price']
 
+            # 새로운 포지션이 열릴 때만 레버리지 변경
+            client.futures_change_leverage(leverage=leverage, symbol=symbol)
+            
             new_order = client.futures_create_test_order(**params)
             return new_order
         except BinanceAPIException as e:
