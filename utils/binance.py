@@ -84,7 +84,6 @@ def get_position(client, symbol):
                 'markPrice': float(pos['markPrice']),
                 'unrealizedProfit': float(pos['unRealizedProfit']),
                 'liquidationPrice': float(pos['liquidationPrice']),
-                'leverage': int(pos['leverage']),
                 'positionSide': pos['positionSide']
             }
             for pos in positions
@@ -94,7 +93,7 @@ def get_position(client, symbol):
         if not active_positions:
             print(f"{symbol}에 대한 활성 포지션이 없습니다.")
             return None
-
+        
         position = active_positions[0]
         position_amt = position['positionAmt']
         
@@ -204,7 +203,7 @@ def calculate_stop_loss_price(entry_price: float, position_side: str, leverage: 
     settings = get_leverage_settings(leverage)
     stop_loss_ratio = settings['stop_loss']
     
-    if position_side == 'LONG':
+    if position_side == 'BUY':
         return round(entry_price * (1 - stop_loss_ratio), 2)
     else:  # SHORT
         return round(entry_price * (1 + stop_loss_ratio), 2)
@@ -240,7 +239,7 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
         current_pos_direction = Client.SIDE_BUY  # Indicates a LONG position
     elif current_pos_amt < 0:
         current_pos_direction = Client.SIDE_SELL  # Indicates a SHORT position
-
+    
     # Case 1: No position currently held for the symbol
     if current_pos_direction is None:
         try:
@@ -280,9 +279,7 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
             close_quantity = abs(current_pos_amt) 
 
             try:
-                # 포지션 정리 전에 해당 심볼의 모든 예약 주문 취소
-                client.futures_cancel_all_open_orders(symbol=symbol)
-
+                
                 closing_order = client.futures_create_order(
                     symbol=symbol,
                     side=close_order_side,
@@ -290,6 +287,10 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
                     quantity=close_quantity,
                     reduceOnly=True  # Ensures this order only reduces or closes the position
                 )
+
+                # 포지션 정리 후에 해당 심볼의 모든 예약 주문 취소
+                client.futures_cancel_all_open_orders(symbol=symbol)
+
                 return closing_order
             except BinanceAPIException as e:
                 return None

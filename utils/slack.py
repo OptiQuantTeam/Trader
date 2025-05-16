@@ -185,8 +185,7 @@ class SlackBot():
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"주문시각: {datetime.datetime.fromtimestamp(resp['time']/1000).strftime('%Y-%m-%d %H:%M:%S')} | " + \
-                            f"갱신시각: {datetime.datetime.fromtimestamp(resp['updateTime']/1000).strftime('%Y-%m-%d %H:%M:%S')}"
+                        "text": f"갱신시각: {datetime.datetime.fromtimestamp(resp['updateTime']/1000).strftime('%Y-%m-%d %H:%M:%S')}"
                     }
                 ]
             }
