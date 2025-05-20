@@ -113,36 +113,76 @@ def get_income(client, symbol):
         print(e)
 
 def adjust_leverage(income, current_leverage):
-    if len(income) <= 2:
+    """
+    수익 내역에 따라 레버리지를 조정합니다.
+    - 2연속 수익 시 레버리지 1단계 상승
+    - 1회 실패 시 레버리지 1단계 하락
+    
+    Args:
+        income (list): 최근 수익 내역 (최신순)
+        current_leverage (int): 현재 레버리지
+    
+    Returns:
+        int: 조정된 레버리지
+    """
+    if len(income) < 2:  # 최소 2개의 거래 내역이 필요
         return current_leverage
-    max_leverage = 4
+        
+    max_leverage = 8
     min_leverage = 1
-
-    if income[0] > 0 and income[1] > 0 and income[2] > 0:
-        return min(current_leverage + 1, max_leverage)
-    elif income[0] < 0 and income[1] < 0 and income[2] < 0:
-        return max(current_leverage - 1, min_leverage)
-    else:
-        return current_leverage
+    
+    # 최근 2개 거래의 수익 확인
+    last_two_trades = income[:2]
+    
+    # 2연속 수익인 경우
+    if last_two_trades[0] > 0 and last_two_trades[1] > 0:
+        return min(current_leverage * 2, max_leverage)
+    
+    # 1회 실패인 경우
+    if last_two_trades[0] < 0:
+        return max(current_leverage // 2, min_leverage)
+    
+    # 그 외의 경우 (1승 1패 등) 현재 레버리지 유지
+    return current_leverage
 
 def get_leverage_settings(leverage: int) -> dict:
     """
-    레버리지에 따른 로스컷과 포지션 비중 설정을 반환합니다.
+    레버리지에 따른 로스컷, 익절, 포지션 비중 설정을 반환합니다.
     
     Args:
-        leverage (int): 레버리지 배수 (1-4)
+        leverage (int): 레버리지 배수 (1, 2, 4, 8)
     
     Returns:
-        dict: 로스컷 비율과 포지션 비중 설정
+        dict: 로스컷 비율, 익절 비율, 포지션 비중 설정
     """
     settings = {
-        4: {'stop_loss': 0.10, 'position_ratio': 0.30},  # 10% 로스컷, 30% 비중
-        3: {'stop_loss': 0.075, 'position_ratio': 0.40}, # 7.5% 로스컷, 40% 비중
-        2: {'stop_loss': 0.05, 'position_ratio': 0.50},  # 5% 로스컷, 50% 비중
-        1: {'stop_loss': 0.025, 'position_ratio': 0.60}  # 2.5% 로스컷, 60% 비중
+        1: {'stop_loss': 0.01, 'take_profit': 0.02, 'position_ratio': 0.70},  # 1% 로스컷, 2% 익절, 70% 비중
+        2: {'stop_loss': 0.02, 'take_profit': 0.04, 'position_ratio': 0.60},  # 2% 로스컷, 4% 익절, 60% 비중
+        4: {'stop_loss': 0.03, 'take_profit': 0.06, 'position_ratio': 0.50},  # 3% 로스컷, 6% 익절, 50% 비중
+        8: {'stop_loss': 0.04, 'take_profit': 0.08, 'position_ratio': 0.40}   # 4% 로스컷, 8% 익절, 40% 비중
     }
     
     return settings.get(leverage, settings[2])  # 기본값은 2배 설정
+
+def calculate_take_profit_price(entry_price: float, position_side: str, leverage: int) -> float:
+    """
+    진입가격과 포지션 방향에 따라 익절 가격을 계산합니다.
+    
+    Args:
+        entry_price (float): 진입 가격
+        position_side (str): 포지션 방향 ('LONG' 또는 'SHORT')
+        leverage (int): 레버리지 배수
+    
+    Returns:
+        float: 계산된 익절 가격
+    """
+    settings = get_leverage_settings(leverage)
+    take_profit_ratio = settings['take_profit']
+    
+    if position_side == 'BUY':
+        return round(entry_price * (1 + take_profit_ratio), 2)
+    else:  # SHORT
+        return round(entry_price * (1 - take_profit_ratio), 2)
 
 def _calculate_position_size(client, symbol: str, info: dict, available_balance: float, leverage: int) -> float:
     """
@@ -178,6 +218,14 @@ def _calculate_position_size(client, symbol: str, info: dict, available_balance:
     # USDT 기준 포지션 크기 계산
     position_size_usdt = round(available_balance * position_ratio, 2)
     
+    print(f"디버깅 정보:")
+    print(f"현재 가격: {current_price}")
+    print(f"최소 수량 단위: {step_size}")
+    print(f"사용 가능한 잔고: {available_balance}")
+    print(f"레버리지: {leverage}")
+    print(f"포지션 비중: {position_ratio}")
+    print(f"계산된 포지션 크기(USDT): {position_size_usdt}")
+    
     # 수량으로 변환
     quantity = position_size_usdt / current_price
     
@@ -185,6 +233,8 @@ def _calculate_position_size(client, symbol: str, info: dict, available_balance:
     decimal_places = len(str(step_size).split('.')[1]) if '.' in str(step_size) else 0
     adjusted_quantity = round(quantity / step_size) * step_size
     adjusted_quantity = round(adjusted_quantity, decimal_places)
+    
+    print(f"최종 계산된 수량: {adjusted_quantity}")
     
     return adjusted_quantity
 
