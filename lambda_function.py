@@ -145,11 +145,8 @@ def lambda_handler(event, context):
                     timestamp=server_timestamp
                 )
 
-                slackBot.send_message(info, order)
-                if stop_order:
-                    slackBot.send_message(info, stop_order)
-                if take_profit_order:
-                    slackBot.send_message(info, take_profit_order)
+                # 메인 주문 메시지에 SL/TP 정보 포함
+                slackBot.send_message(info, order, sl=stop_order, tp=take_profit_order)
                 # 레버리지 변경 저장
                 utils.set_leverage(AWS_USER_ID, leverage)
         else:
