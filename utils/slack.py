@@ -53,20 +53,52 @@ class SlackBot():
                         "text": f"*수량:*\n{resp['origQty']}"
                     }
                 ]
-            },
-            {
-                "type": "context",
-                "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": f"상태: {resp['status']} | 주문시각: {resp['updateTime']}"
-                    }
-                ]
             }
         ]
 
+        # Stop Loss와 Take Profit 정보가 있는 경우 추가
+        if sl is not None or tp is not None:
+            fields = []
+            
+            if sl is not None:
+                fields.append({
+                    "type": "mrkdwn",
+                    "text": f"*Stop Loss:*\n{sl['stopPrice']}"
+                })
+            
+            if tp is not None:
+                fields.append({
+                    "type": "mrkdwn",
+                    "text": f"*Take Profit:*\n{tp['stopPrice']}"
+                })
+            
+            blocks.append({
+                "type": "section",
+                "fields": fields
+            })
+
+        blocks.append({
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"상태: {resp['status']} | 주문시각: {resp['updateTime']}"
+                }
+            ]
+        })
+
         # 기본 텍스트 메시지
         summary_text = f"{tag} {position_emoji} {resp['symbol']} {resp['side']} 포지션 {resp['origQty']} 수량"
+        
+        # SL/TP 정보가 있는 경우 요약 텍스트에 추가
+        sl_tp_info = []
+        if sl is not None:
+            sl_tp_info.append(f"SL: {sl['stopPrice']}")
+        if tp is not None:
+            sl_tp_info.append(f"TP: {tp['stopPrice']}")
+        
+        if sl_tp_info:
+            summary_text += f" ({', '.join(sl_tp_info)})"
 
         response = self.client.chat_postMessage(
             channel=self.channel,
