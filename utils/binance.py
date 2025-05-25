@@ -319,7 +319,7 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
             return None
         except Exception as e:
             return None
-
+    '''
     # Case 2: A position currently exists for the symbol
     else:
         # Subcase 2.1: New order is in the same direction as the current position
@@ -349,7 +349,7 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
                 return None
             except Exception as e:
                 return None
-
+    '''
 def process_test_trade_logic(client, symbol: str, order_side: str, order_quantity: float, order_type: str, order_price: float = None, time_in_force: str = None, leverage: int = 2):
     """
     Processes a futures trade based on the current position and new order details.
