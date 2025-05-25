@@ -101,7 +101,15 @@ def lambda_handler(event, context):
                     if total_qty_sum > 0:
                         actual_entry_price = total_price_sum / total_qty_sum
                 
+                # Stop Loss 가격 계산
                 stop_price_calculated = utils.calculate_stop_loss_price(
+                    entry_price=actual_entry_price,
+                    position_side=order['side'],
+                    leverage=leverage
+                )
+                
+                # Take Profit 가격 계산
+                take_profit_price_calculated = utils.calculate_take_profit_price(
                     entry_price=actual_entry_price,
                     position_side=order['side'],
                     leverage=leverage
@@ -110,9 +118,12 @@ def lambda_handler(event, context):
                 symbol_details = get_symbol_info(client, params['symbol'])
                 price_precision = symbol_details['pricePrecision'] if symbol_details else 2
                 stop_price_rounded = round(stop_price_calculated, price_precision)
+                take_profit_price_rounded = round(take_profit_price_calculated, price_precision)
 
                 stop_loss_order_side = Client.SIDE_SELL if order['side'] == Client.SIDE_BUY else Client.SIDE_BUY
+                take_profit_order_side = Client.SIDE_SELL if order['side'] == Client.SIDE_BUY else Client.SIDE_BUY
 
+                # Stop Loss 주문
                 stop_order = client.futures_create_order(
                     symbol=params['symbol'],
                     side=stop_loss_order_side,
@@ -122,9 +133,23 @@ def lambda_handler(event, context):
                     newOrderRespType='FULL',
                     timestamp=server_timestamp
                 )
+
+                # Take Profit 주문
+                take_profit_order = client.futures_create_order(
+                    symbol=params['symbol'],
+                    side=take_profit_order_side,
+                    type='TAKE_PROFIT_MARKET',
+                    stopPrice=take_profit_price_rounded,
+                    closePosition=True,
+                    newOrderRespType='FULL',
+                    timestamp=server_timestamp
+                )
+
                 slackBot.send_message(info, order)
                 if stop_order:
                     slackBot.send_message(info, stop_order)
+                if take_profit_order:
+                    slackBot.send_message(info, take_profit_order)
                 # 레버리지 변경 저장
                 utils.set_leverage(AWS_USER_ID, leverage)
         else:
