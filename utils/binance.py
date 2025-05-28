@@ -297,6 +297,9 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
     # Case 1: No position currently held for the symbol
     if current_pos_direction is None:
         try:
+            # 기존 예약 주문 취소
+            client.futures_cancel_all_open_orders(symbol=symbol)
+
             params = {
                 'symbol': symbol,
                 'side': order_side,
