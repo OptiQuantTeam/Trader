@@ -108,9 +108,14 @@ def get_income(client, symbol):
     try:
         response = client.futures_income_history(symbol=symbol, incomeType='REALIZED_PNL', endTime=end_time, startTime=start_time)
         income = [float(item['income']) for item in response]
+        
+        # 수입 내역이 3개 미만인 경우 처리
+        if len(income) < 3:
+            return income  # 가능한 만큼의 수입 내역 반환
+            
         return income[-3:]  # 최근 3개의 수입 내역
     except Exception as e:
-        print(e)
+        return []
 
 def adjust_leverage(income, current_leverage):
     """
@@ -138,8 +143,8 @@ def adjust_leverage(income, current_leverage):
     if last_two_trades[0] > 0 and last_two_trades[1] > 0:
         return min(current_leverage * 2, max_leverage)
     
-    # 1회 실패인 경우
-    if last_two_trades[0] < 0:
+    # 2연속 실패인 경우
+    if last_two_trades[0] < 0 and last_two_trades[1] < 0:
         return max(current_leverage // 2, min_leverage)
     
     # 그 외의 경우 (1승 1패 등) 현재 레버리지 유지
@@ -156,10 +161,10 @@ def get_leverage_settings(leverage: int) -> dict:
         dict: 로스컷 비율, 익절 비율, 포지션 비중 설정
     """
     settings = {
-        1: {'stop_loss': 0.01, 'take_profit': 0.02, 'position_ratio': 0.70},  # 1% 로스컷, 2% 익절, 70% 비중
-        2: {'stop_loss': 0.02, 'take_profit': 0.04, 'position_ratio': 0.60},  # 2% 로스컷, 4% 익절, 60% 비중
-        4: {'stop_loss': 0.03, 'take_profit': 0.06, 'position_ratio': 0.50},  # 3% 로스컷, 6% 익절, 50% 비중
-        8: {'stop_loss': 0.04, 'take_profit': 0.08, 'position_ratio': 0.40}   # 4% 로스컷, 8% 익절, 40% 비중
+        1: {'stop_loss': 0.02, 'take_profit': 0.04, 'position_ratio': 0.70},  # 2% 로스컷, 4% 익절, 70% 비중
+        2: {'stop_loss': 0.03, 'take_profit': 0.06, 'position_ratio': 0.60},  # 3% 로스컷, 6% 익절, 60% 비중
+        4: {'stop_loss': 0.04, 'take_profit': 0.08, 'position_ratio': 0.50},  # 4% 로스컷, 8% 익절, 50% 비중
+        8: {'stop_loss': 0.05, 'take_profit': 0.10, 'position_ratio': 0.40}   # 5% 로스컷, 10% 익절, 40% 비중
     }
     
     return settings.get(leverage, settings[2])  # 기본값은 2배 설정
@@ -218,14 +223,6 @@ def _calculate_position_size(client, symbol: str, info: dict, available_balance:
     # USDT 기준 포지션 크기 계산
     position_size_usdt = round(available_balance * position_ratio, 2)
     
-    print(f"디버깅 정보:")
-    print(f"현재 가격: {current_price}")
-    print(f"최소 수량 단위: {step_size}")
-    print(f"사용 가능한 잔고: {available_balance}")
-    print(f"레버리지: {leverage}")
-    print(f"포지션 비중: {position_ratio}")
-    print(f"계산된 포지션 크기(USDT): {position_size_usdt}")
-    
     # 수량으로 변환
     quantity = position_size_usdt / current_price
     
@@ -233,8 +230,6 @@ def _calculate_position_size(client, symbol: str, info: dict, available_balance:
     decimal_places = len(str(step_size).split('.')[1]) if '.' in str(step_size) else 0
     adjusted_quantity = round(quantity / step_size) * step_size
     adjusted_quantity = round(adjusted_quantity, decimal_places)
-    
-    print(f"최종 계산된 수량: {adjusted_quantity}")
     
     return adjusted_quantity
 
