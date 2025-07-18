@@ -162,9 +162,9 @@ def get_leverage_settings(leverage: int) -> dict:
     """
     settings = {
         1: {'stop_loss': 0.02, 'take_profit': 0.04, 'position_ratio': 0.70},  # 2% 로스컷, 4% 익절, 70% 비중
-        2: {'stop_loss': 0.03, 'take_profit': 0.06, 'position_ratio': 0.60},  # 3% 로스컷, 6% 익절, 60% 비중
-        4: {'stop_loss': 0.04, 'take_profit': 0.08, 'position_ratio': 0.50},  # 4% 로스컷, 8% 익절, 50% 비중
-        8: {'stop_loss': 0.05, 'take_profit': 0.10, 'position_ratio': 0.40}   # 5% 로스컷, 10% 익절, 40% 비중
+        2: {'stop_loss': 0.015, 'take_profit': 0.03, 'position_ratio': 0.60},  # 3% 로스컷, 6% 익절, 60% 비중
+        4: {'stop_loss': 0.01, 'take_profit': 0.02, 'position_ratio': 0.50},  # 4% 로스컷, 8% 익절, 50% 비중
+        8: {'stop_loss': 0.0075, 'take_profit': 0.015, 'position_ratio': 0.40}   # 6% 로스컷, 12% 익절, 40% 비중
     }
     
     return settings.get(leverage, settings[2])  # 기본값은 2배 설정
