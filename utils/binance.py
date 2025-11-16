@@ -223,6 +223,19 @@ def _calculate_position_size(client, symbol: str, info: dict, available_balance:
     # USDT 기준 포지션 크기 계산
     position_size_usdt = round(available_balance * position_ratio, 2)
     
+    # 바이낸스 최소 주문 금액 체크 (100 USDT)
+    MIN_NOTIONAL = 100.0
+    if position_size_usdt < MIN_NOTIONAL:
+        # 최소 금액을 보장하기 위해 필요한 잔고 확인
+        required_balance = MIN_NOTIONAL / position_ratio
+        if available_balance < required_balance:
+            raise ValueError(
+                f"잔고 부족: 최소 주문 금액({MIN_NOTIONAL} USDT)을 위해 "
+                f"약 {required_balance:.2f} USDT가 필요하지만 현재 {available_balance:.2f} USDT만 있습니다."
+            )
+        # 최소 금액으로 설정
+        position_size_usdt = MIN_NOTIONAL
+    
     # 수량으로 변환
     quantity = position_size_usdt / current_price
     
@@ -230,6 +243,20 @@ def _calculate_position_size(client, symbol: str, info: dict, available_balance:
     decimal_places = len(str(step_size).split('.')[1]) if '.' in str(step_size) else 0
     adjusted_quantity = round(quantity / step_size) * step_size
     adjusted_quantity = round(adjusted_quantity, decimal_places)
+    
+    # 조정된 수량의 실제 명목가치 확인
+    actual_notional = adjusted_quantity * current_price
+    if actual_notional < MIN_NOTIONAL:
+        # step_size 조정으로 인해 명목가치가 100 USDT 미만이 된 경우, 한 단계 더 올림
+        adjusted_quantity = round((quantity / step_size) + 1) * step_size
+        adjusted_quantity = round(adjusted_quantity, decimal_places)
+        actual_notional = adjusted_quantity * current_price
+        
+        if actual_notional < MIN_NOTIONAL:
+            raise ValueError(
+                f"계산된 주문 금액({actual_notional:.2f} USDT)이 최소 주문 금액({MIN_NOTIONAL} USDT)보다 작습니다. "
+                f"잔고를 확인해주세요."
+            )
     
     return adjusted_quantity
 
@@ -310,8 +337,9 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
 
             # 새로운 포지션이 열릴 때만 레버리지 변경
             client.futures_change_leverage(leverage=leverage, symbol=symbol)
-
+            
             new_order = client.futures_create_order(**params)
+            
             return new_order
         except BinanceAPIException as e:
             return None
@@ -403,7 +431,6 @@ def process_test_trade_logic(client, symbol: str, order_side: str, order_quantit
 
             # 새로운 포지션이 열릴 때만 레버리지 변경
             client.futures_change_leverage(leverage=leverage, symbol=symbol)
-            
             new_order = client.futures_create_test_order(**params)
             return new_order
         except BinanceAPIException as e:
