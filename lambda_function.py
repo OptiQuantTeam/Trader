@@ -124,25 +124,22 @@ def lambda_handler(event, context):
                 take_profit_order_side = Client.SIDE_SELL if order['side'] == Client.SIDE_BUY else Client.SIDE_BUY
 
                 # Stop Loss 주문
-                stop_order = client.futures_create_order(
-                    symbol=params['symbol'],
-                    side=stop_loss_order_side,
-                    type='STOP_MARKET',
-                    stopPrice=stop_price_rounded,
-                    closePosition=True,
-                    newOrderRespType='FULL',
-                    timestamp=server_timestamp
+                stop_order = client.futures_create_algo_order(
+                symbol=params['symbol'],
+                side=stop_loss_order_side,
+                type='STOP_MARKET',
+                quantity=params['quantity'],
+                triggerPrice=stop_price_rounded,
+                algoType='CONDITIONAL'
                 )
 
                 # Take Profit 주문
-                take_profit_order = client.futures_create_order(
-                    symbol=params['symbol'],
-                    side=take_profit_order_side,
-                    type='TAKE_PROFIT_MARKET',
-                    stopPrice=take_profit_price_rounded,
-                    closePosition=True,
-                    newOrderRespType='FULL',
-                    timestamp=server_timestamp
+                take_profit_order = client.futures_create_algo_order(
+                symbol=params['symbol'],
+                side=take_profit_order_side,
+                type='TAKE_PROFIT_MARKET',
+                quantity=params['quantity'],
+                triggerPrice=take_profit_price_rounded,
                 )
 
                 # 메인 주문 메시지에 SL/TP 정보 포함
