@@ -13,7 +13,7 @@ jmespath==1.0.1
 multidict==6.1.0
 propcache==0.2.1
 pycryptodome==3.21.0
-python-binance==1.0.25
+python-binance==1.0.34
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pytz==2024.2
