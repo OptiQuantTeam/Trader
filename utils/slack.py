@@ -63,13 +63,13 @@ class SlackBot():
             if sl is not None:
                 fields.append({
                     "type": "mrkdwn",
-                    "text": f"*Stop Loss:*\n{sl['stopPrice']}"
+                    "text": f"*Stop Loss:*\n{sl['triggerPrice']}"
                 })
             
             if tp is not None:
                 fields.append({
                     "type": "mrkdwn",
-                    "text": f"*Take Profit:*\n{tp['stopPrice']}"
+                    "text": f"*Take Profit:*\n{tp['triggerPrice']}"
                 })
             
             blocks.append({
@@ -93,9 +93,9 @@ class SlackBot():
         # SL/TP 정보가 있는 경우 요약 텍스트에 추가
         sl_tp_info = []
         if sl is not None:
-            sl_tp_info.append(f"SL: {sl['stopPrice']}")
+            sl_tp_info.append(f"SL: {sl['triggerPrice']}")
         if tp is not None:
-            sl_tp_info.append(f"TP: {tp['stopPrice']}")
+            sl_tp_info.append(f"TP: {tp['triggerPrice']}")
         
         if sl_tp_info:
             summary_text += f" ({', '.join(sl_tp_info)})"
