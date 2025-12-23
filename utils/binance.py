@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
+import math
 
 def futures_market_params(client, info, config, asset):
     quantity = _calculate_position_size(client, info['symbol'], info, asset, int(config['leverage']))
@@ -210,54 +211,44 @@ def _calculate_position_size(client, symbol: str, info: dict, available_balance:
     if not symbol_info:
         raise ValueError(f"Symbol {symbol} not found")
     
+    filters = {f['filterType']: f for f in symbol_info['filters']}
+
+    lot_filter = filters['LOT_SIZE']
+    min_qty = float(lot_filter['minQty'])
+    step_size = float(lot_filter['stepSize'])
+    min_notional = float(filters['MIN_NOTIONAL']['notional'])
+
     # 현재 가격
     current_price = float(info['price'])
-    
-    # 최소 수량 단위 (step_size) 설정
-    step_size = float(next(f['stepSize'] for f in symbol_info['filters'] if f['filterType'] == 'LOT_SIZE'))
-    
+    if current_price <= 0:
+        raise ValueError('Invalid Price')
+
     # 레버리지 설정에 따른 포지션 비중 가져오기
     settings = get_leverage_settings(leverage)
     position_ratio = settings['position_ratio']
-    
-    # USDT 기준 포지션 크기 계산
-    position_size_usdt = round(available_balance * position_ratio, 2)
-    
-    # 바이낸스 최소 주문 금액 체크 (100 USDT)
-    MIN_NOTIONAL = 100.0
-    if position_size_usdt < MIN_NOTIONAL:
-        # 최소 금액을 보장하기 위해 필요한 잔고 확인
-        required_balance = MIN_NOTIONAL / position_ratio
-        if available_balance < required_balance:
+
+    target_notional = available_balance * position_ratio
+    if target_notional < min_notional:
+        required_balance = min_notional / position_ratio
+        if available_balance < min_notional:
             raise ValueError(
-                f"잔고 부족: 최소 주문 금액({MIN_NOTIONAL} USDT)을 위해 "
-                f"약 {required_balance:.2f} USDT가 필요하지만 현재 {available_balance:.2f} USDT만 있습니다."
+                f"잔고 부족: 최소 주문 금액 {min_notional} USDT가 필요하지만 현재 {available_balance:.2f} USDT만 있습니다."
             )
-        # 최소 금액으로 설정
-        position_size_usdt = MIN_NOTIONAL
-    
-    # 수량으로 변환
-    quantity = position_size_usdt / current_price
-    
-    # step_size에 맞게 수량 조정
-    decimal_places = len(str(step_size).split('.')[1]) if '.' in str(step_size) else 0
-    adjusted_quantity = round(quantity / step_size) * step_size
-    adjusted_quantity = round(adjusted_quantity, decimal_places)
-    
-    # 조정된 수량의 실제 명목가치 확인
+        target_notional = min_notional
+
+    raw_qty = target_notional / current_price
+    qty_base = max(raw_qty, min_qty, min_notional/current_price)
+
+    precision = int(round(-math.log10(step_size), 0))
+    adjusted_quantity = math.ceil(qty_base/step_size) * step_size
+    adjusted_quantity = round(adjusted_quantity, precision)
+
     actual_notional = adjusted_quantity * current_price
-    if actual_notional < MIN_NOTIONAL:
-        # step_size 조정으로 인해 명목가치가 100 USDT 미만이 된 경우, 한 단계 더 올림
-        adjusted_quantity = round((quantity / step_size) + 1) * step_size
-        adjusted_quantity = round(adjusted_quantity, decimal_places)
-        actual_notional = adjusted_quantity * current_price
-        
-        if actual_notional < MIN_NOTIONAL:
-            raise ValueError(
-                f"계산된 주문 금액({actual_notional:.2f} USDT)이 최소 주문 금액({MIN_NOTIONAL} USDT)보다 작습니다. "
-                f"잔고를 확인해주세요."
-            )
-    
+    if actual_notional < min_notional:
+        raise ValueError(
+            f"주문 금액 부족: {actual_notional:.2f} < {min_notional}"
+        )
+   
     return adjusted_quantity
 
 def calculate_stop_loss_price(entry_price: float, position_side: str, leverage: int) -> float:
