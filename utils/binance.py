@@ -1,4 +1,3 @@
-from cgi import print_exception
 from datetime import datetime, timedelta
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
