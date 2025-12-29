@@ -1,4 +1,3 @@
-from hmac import trans_36
 import json
 import os
 from dotenv import load_dotenv
