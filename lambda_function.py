@@ -1,3 +1,4 @@
+from hmac import trans_36
 import json
 import os
 from dotenv import load_dotenv
@@ -85,10 +86,12 @@ def lambda_handler(event, context):
             order_type=params['type'],
             leverage=leverage
         )
-
+        print(f'trade_action_result: {trade_action_result}')
         if trade_action_result:
             order = trade_action_result
-            
+            stop_order = None
+            take_profit_order = None
+
             # 포지션 정리인 경우
             if order.get('reduceOnly', False):
                 slackBot.send_close_position(info, order)
@@ -140,17 +143,20 @@ def lambda_handler(event, context):
                 type='TAKE_PROFIT_MARKET',
                 quantity=params['quantity'],
                 triggerPrice=take_profit_price_rounded,
+                algoType='CONDITIONAL'
                 )
 
                 # 메인 주문 메시지에 SL/TP 정보 포함
                 slackBot.send_message(info, order, sl=stop_order, tp=take_profit_order)
                 # 레버리지 변경 저장
                 utils.set_leverage(AWS_USER_ID, leverage)
+            response = {'statusCode': 200, f'body': f'{trade_action_result}\n{stop_order if stop_order is not None else "No Stop Order"}\n{take_profit_order if take_profit_order is not None else "No Take Profit Order"}'}
         else:
+            response = {'statusCode': 200, 'body': 'trade action result is None'}
             pass
 
         
-        response = {'statusCode': 200, 'body': 'success'}
+        #response = {'statusCode': 200, 'body': 'success'}
     except Exception as e:
         slackBot.send_error(str(e))
         response = {'statusCode': 400, 'body': str(e)}
