@@ -135,7 +135,7 @@ def adjust_leverage(income, current_leverage):
         return current_leverage
         
     max_leverage = 8
-    min_leverage = 1
+    min_leverage = 2
     
     # 최근 2개 거래의 수익 확인
     last_two_trades = income[:2]
@@ -231,13 +231,17 @@ def _calculate_position_size(client, symbol: str, info: dict, available_balance:
     max_position_value = available_balance * leverage * 0.95
     # 목표 주문 금액 계산 (최대 포지션 가치의 일정 비율)
     target_notional = max_position_value * position_ratio
-    
+    print(f'target_notional: {target_notional}')
     if target_notional < min_notional:
-        required_balance = min_notional / position_ratio
-        if available_balance < min_notional:
+        required_position_ratio = min_notional / max_position_value
+
+        if required_position_ratio > 1.0:
             raise ValueError(
-                f"잔고 부족: 최소 주문 금액 {min_notional} USDT가 필요하지만 현재 {available_balance:.2f} USDT만 있습니다."
+                f"잔고 부족: 레버리지를 고려해도 최소 주문 금액 {min_notional} USDT를 충족할 수 없습니다."
             )
+
+        # position_ratio 자동 상향
+        position_ratio = required_position_ratio
         target_notional = min_notional
 
     raw_qty = target_notional / current_price
