@@ -333,8 +333,10 @@ def process_trade_logic(client, symbol: str, order_side: str, order_quantity: fl
             
             return new_order
         except BinanceAPIException as e:
+            print(f'BinanceAPIException: {e}')
             return None
         except Exception as e:
+            print(f'Exception: {e}')
             return None
     '''
     # Case 2: A position currently exists for the symbol
