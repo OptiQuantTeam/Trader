@@ -227,7 +227,11 @@ def _calculate_position_size(client, symbol: str, info: dict, available_balance:
     settings = get_leverage_settings(leverage)
     position_ratio = settings['position_ratio']
 
-    target_notional = available_balance * position_ratio
+    # 최대 포지션 가치 계산 (사용 가능한 잔고의 95% 고려)
+    max_position_value = available_balance * leverage * 0.95
+    # 목표 주문 금액 계산 (최대 포지션 가치의 일정 비율)
+    target_notional = max_position_value * position_ratio
+    
     if target_notional < min_notional:
         required_balance = min_notional / position_ratio
         if available_balance < min_notional:
