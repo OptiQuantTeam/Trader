@@ -68,14 +68,17 @@ def lambda_handler(event, context):
         server_time = client.get_server_time()
         server_timestamp = server_time['serverTime']
 
+        # 최근 3개의 수입 내역 확인
+        income = utils.get_income(client, info['symbol'])
+        # 레버리지 조정
+        config['leverage'] = utils.adjust_leverage(income, int(config['leverage']))
+
         # 매매 파라미터 생성
         params = utils.futures_market_params(client=client, info=info, config=config, asset=usdt)
         
-        # 최근 3개의 수입 내역 확인
-        income = utils.get_income(client, params['symbol'])
+        
 
-        # 레버리지 조정
-        leverage = utils.adjust_leverage(income, params['leverage'])
+        
 
         trade_action_result = utils.process_trade_logic(
             client=client,
@@ -83,7 +86,7 @@ def lambda_handler(event, context):
             order_side=params['side'],
             order_quantity=params['quantity'],
             order_type=params['type'],
-            leverage=leverage
+            leverage=params['leverage']
         )
         print(f'trade_action_result: {trade_action_result}')
         if trade_action_result:
@@ -107,14 +110,14 @@ def lambda_handler(event, context):
                 stop_price_calculated = utils.calculate_stop_loss_price(
                     entry_price=actual_entry_price,
                     position_side=order['side'],
-                    leverage=leverage
+                    leverage=params['leverage']
                 )
                 
                 # Take Profit 가격 계산
                 take_profit_price_calculated = utils.calculate_take_profit_price(
                     entry_price=actual_entry_price,
                     position_side=order['side'],
-                    leverage=leverage
+                    leverage=params['leverage']
                 )
                 
                 symbol_details = get_symbol_info(client, params['symbol'])
@@ -148,7 +151,7 @@ def lambda_handler(event, context):
                 # 메인 주문 메시지에 SL/TP 정보 포함
                 slackBot.send_message(info, order, sl=stop_order, tp=take_profit_order)
                 # 레버리지 변경 저장
-                utils.set_leverage(AWS_USER_ID, leverage)
+                utils.set_leverage(AWS_USER_ID, params['leverage'])
             response = {'statusCode': 200, f'body': f'{trade_action_result}\n{stop_order if stop_order is not None else "No Stop Order"}\n{take_profit_order if take_profit_order is not None else "No Take Profit Order"}'}
         else:
             response = {'statusCode': 200, 'body': 'trade action result is None'}
